@@ -1,0 +1,95 @@
+{
+  "name": "rehype-image-hack",
+  "version": "0.0.1-alpha.01",
+  "description": "Rehype plugin to enhance image/video/audio asset properties //TODO",
+  "type": "module",
+  "exports": "./dist/esm/index.js",
+  "main": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "scripts": {
+    "build": "rimraf dist && tsc --build && type-coverage",
+    "format": "npm run prettier && npm run lint",
+    "prettier": "prettier --write .",
+    "lint": "eslint .",
+    "test": "vitest --watch=false",
+    "test:watch": "vitest",
+    "test:file1": "vitest test.md.spec.ts",
+    "test:file2": "vitest test.html.spec.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run test && npm run format && npm run test-coverage",
+    "test-coverage": "vitest run --coverage"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipikuka/rehype-image-hack.git"
+  },
+  "keywords": [
+    "unified",
+    "rehype",
+    "hast",
+    "markdown",
+    "mdx",
+    "plugin",
+    "rehype plugin",
+    "rehype image",
+    "rehype video",
+    "rehype audio",
+    "rehype plugin image",
+    "rehype plugin video",
+    "rehype plugin audio"
+  ],
+  "author": "ipikuka <talatkuyuk@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/ipikuka/rehype-image-hack#readme",
+  "bugs": {
+    "url": "https://github.com/ipikuka/rehype-image-hack/issues"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/dedent": "^0.7.2",
+    "@types/node": "^22.13.5",
+    "@vitest/coverage-v8": "^3.0.7",
+    "@vitest/eslint-plugin": "^1.1.33",
+    "dedent": "^1.5.3",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "prettier": "^3.5.2",
+    "rehype": "^13.0.2",
+    "rehype-highlight": "^7.0.2",
+    "rehype-parse": "^9.0.1",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.1",
+    "rimraf": "^5.0.10",
+    "type-coverage": "^2.29.7",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.25.0",
+    "unified": "^11.0.5",
+    "unist-util-remove-position": "^5.0.0",
+    "vfile": "^6.0.3",
+    "vitest": "^3.0.5"
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "unist-util-visit": "^5.0.0"
+  },
+  "peerDependencies": {
+    "unified": "^11"
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "detail": true,
+    "ignoreAsAssertion": true,
+    "strict": true
+  },
+  "sideEffects": false
+}
