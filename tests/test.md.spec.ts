@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import dedent from "dedent";
 import * as prettier from "prettier";
 
-import { processFromMd } from "./util/index";
+import { processMd } from "./util/index";
 
 describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
@@ -11,7 +11,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       ![](image.png)
     `;
 
-    const html = String(await processFromMd(input));
+    const html = String(await processMd(input));
 
     expect(html).toMatchInlineSnapshot(`"<p><img src="image.png" alt=""></p>"`);
 
