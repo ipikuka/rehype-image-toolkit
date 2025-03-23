@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
-import * as prettier from "prettier";
 
 import * as utils from "./util/reference";
 
