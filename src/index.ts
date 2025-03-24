@@ -30,15 +30,6 @@ type PartiallyRequiredImageHackOptions = Prettify<
   PartiallyRequired<ImageHackOptions, "enable">
 >;
 
-// check if it is a string array
-/* v8 ignore next 6 */
-function isStringArray(value: unknown): value is string[] {
-  return (
-    // type-coverage:ignore-next-line
-    Array.isArray(value) && value.every((item) => typeof item === "string")
-  );
-}
-
 /**
  *
  * enhance image/video/audio asset properties //TODO
@@ -71,6 +62,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     visit(tree, "mdxJsxFlowElement", function (node, index, parent): VisitorResult {
+      /* v8 ignore next 3 */
       if (!parent || index === undefined || node.type !== "mdxJsxFlowElement") {
         return;
       }
