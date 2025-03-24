@@ -1,6 +1,6 @@
 {
   "name": "rehype-image-hack",
-  "version": "0.0.1-alpha",
+  "version": "0.0.2-alpha",
   "description": "Rehype plugin to enhance image/video/audio asset properties //TODO",
   "type": "module",
   "exports": "./dist/esm/index.js",
