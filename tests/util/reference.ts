@@ -6,38 +6,21 @@ import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import type { VFileCompatible, VFile } from "vfile";
 
-// This util is designed for testing without plugin "rehype-image-hack"
+// This util is designed for testing markdown/html content without plugin "rehype-image-hack"
 
-const compilerCreatorFromHtml = unified()
-  .use(rehypeParse, { fragment: true })
-  .use(rehypeStringify);
-
-export const processHtml = async (content: VFileCompatible): Promise<VFile> => {
-  return compilerCreatorFromHtml.process(content);
+export const processHtml = async (content: VFileCompatible) => {
+  return unified().use(rehypeParse, { fragment: true }).use(rehypeStringify).process(content);
 };
-
-const compilerCreatorFromMd = unified().use(remarkParse).use(remarkRehype).use(rehypeStringify);
 
 export const processMd = async (content: VFileCompatible): Promise<VFile> => {
-  return compilerCreatorFromMd.process(content);
+  return unified().use(remarkParse).use(remarkRehype).use(rehypeStringify).process(content);
 };
 
-const compilerCreatorRawFirst = unified()
-  .use(remarkParse)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeRaw)
-  .use(rehypeStringify);
-
-export const processMdRawFirst = async (content: VFileCompatible): Promise<VFile> => {
-  return compilerCreatorRawFirst.process(content);
-};
-
-const compilerCreatorRawLast = unified()
-  .use(remarkParse)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeRaw)
-  .use(rehypeStringify);
-
-export const processMdRawLast = async (content: VFileCompatible): Promise<VFile> => {
-  return compilerCreatorRawLast.process(content);
+export const processMdRaw = async (content: VFileCompatible): Promise<VFile> => {
+  return unified()
+    .use(remarkParse)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeRaw)
+    .use(rehypeStringify)
+    .process(content);
 };

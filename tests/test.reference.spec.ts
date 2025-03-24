@@ -79,7 +79,7 @@ describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
   });
 });
 
-describe("reyhpe-image-hack from markdown source, rehype-raw first", () => {
+describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
   // *************************************
   it("process markdown input, first markdown image, then html image, no empty line", async () => {
     const input = dedent`
@@ -87,7 +87,7 @@ describe("reyhpe-image-hack from markdown source, rehype-raw first", () => {
       <img src="image.png" alt="">
     `;
 
-    const html = String(await utils.processMdRawFirst(input));
+    const html = String(await utils.processMdRaw(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<p><img src="image.png" alt="">
@@ -102,7 +102,7 @@ describe("reyhpe-image-hack from markdown source, rehype-raw first", () => {
       ![](image.png)
     `;
 
-    const html = String(await utils.processMdRawFirst(input));
+    const html = String(await utils.processMdRaw(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<img src="image.png" alt="">
@@ -118,7 +118,7 @@ describe("reyhpe-image-hack from markdown source, rehype-raw first", () => {
       <img src="image.png" alt="">
     `;
 
-    const html = String(await utils.processMdRawFirst(input));
+    const html = String(await utils.processMdRaw(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<p><img src="image.png" alt=""></p>
@@ -134,71 +134,7 @@ describe("reyhpe-image-hack from markdown source, rehype-raw first", () => {
       ![](image.png)
     `;
 
-    const html = String(await utils.processMdRawFirst(input));
-
-    expect(html).toMatchInlineSnapshot(`
-      "<img src="image.png" alt="">
-      <p><img src="image.png" alt=""></p>"
-    `);
-  });
-});
-
-describe("reyhpe-image-hack from markdown source, rehype-raw last", () => {
-  // *************************************
-  it("process markdown input, first markdown image, then html image, no empty line", async () => {
-    const input = dedent`
-      ![](image.png)
-      <img src="image.png" alt="">
-    `;
-
-    const html = String(await utils.processMdRawLast(input));
-
-    expect(html).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt="">
-      <img src="image.png" alt=""></p>"
-    `);
-  });
-
-  // *************************************
-  it("process markdown input, first html image, then markdown image, no empty line", async () => {
-    const input = dedent`
-      <img src="image.png" alt="">
-      ![](image.png)
-    `;
-
-    const html = String(await utils.processMdRawLast(input));
-
-    expect(html).toMatchInlineSnapshot(`
-      "<img src="image.png" alt="">
-      ![](image.png)"
-    `);
-  });
-
-  // *************************************
-  it("process markdown input, first markdown image, then html image, with empty line", async () => {
-    const input = dedent`
-      ![](image.png)
-
-      <img src="image.png" alt="">
-    `;
-
-    const html = String(await utils.processMdRawLast(input));
-
-    expect(html).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt=""></p>
-      <img src="image.png" alt="">"
-    `);
-  });
-
-  // *************************************
-  it("process markdown input, first html image, then markdown image, with empty line", async () => {
-    const input = dedent`
-      <img src="image.png" alt="">
-
-      ![](image.png)
-    `;
-
-    const html = String(await utils.processMdRawLast(input));
+    const html = String(await utils.processMdRaw(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<img src="image.png" alt="">
