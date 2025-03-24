@@ -2,6 +2,9 @@ import type { Plugin } from "unified";
 import type { Root } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
+
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type PartiallyRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
@@ -58,19 +61,21 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    *   Nothing.
    */
   return (tree: Root): undefined => {
+    // console.dir(tree, { depth: 8 });
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || node.tagName !== "img") {
         return;
       }
 
-      // for type narrowing
-      /* v8 ignore next 6 */
-      if (
-        !isStringArray(node.properties.className) &&
-        node.properties.className !== undefined
-      ) {
+      // console.log(node);
+    });
+
+    visit(tree, "mdxJsxFlowElement", function (node, index, parent): VisitorResult {
+      if (!parent || index === undefined || node.type !== "mdxJsxFlowElement") {
         return;
       }
+
+      // console.log(node);
     });
   };
 };
