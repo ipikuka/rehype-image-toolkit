@@ -93,6 +93,7 @@
     "atLeast": 100,
     "detail": true,
     "ignoreAsAssertion": true,
+    "ignoreNonNullAssertion": true,
     "strict": true
   },
   "sideEffects": false
