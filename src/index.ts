@@ -69,15 +69,6 @@ const img = {
   l: "loading",
 };
 
-// check if it is a string array
-function isStringArray(value: unknown): value is string[] {
-  return (
-    /* v8 ignore next */
-    // type-coverage:ignore-next-line
-    Array.isArray(value) && value.every((item) => typeof item === "string")
-  );
-}
-
 const videoMimeTypes: Record<string, string> = {
   mp4: "video/mp4",
   mov: "video/quicktime",
@@ -379,7 +370,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             node.properties.id = attr.slice(1);
           } else if (attr.startsWith(".")) {
             /* v8 ignore next 4 */
-            if (isStringArray(node.properties.className)) {
+            if (Array.isArray(node.properties.className)) {
               node.properties.className.push(attr.slice(1));
             } else if (typeof node.properties.className === "string") {
               node.properties.className = [node.properties.className, attr.slice(1)];
