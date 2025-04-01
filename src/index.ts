@@ -101,20 +101,19 @@ const isAudioExt = (ext: string) => audioExtensions.indexOf(ext) >= 0;
  *
  */
 const getExtension = (src: string | undefined): string | undefined => {
-  if (!src) return;
-
-  // Match the file extension before any query or hash
+  // Match the file extension; consider may has a trailing query or hash
   const RE = /\.([a-zA-Z0-9]+)(?=[?#]|$)/i;
 
-  const match = src.match(RE);
+  const match = src?.match(RE);
 
-  return match ? match[1] : undefined;
+  return match?.[1];
 };
 
 /**
  *
- * enhance image/video/audio asset properties //TODO
- *
+ * enhance markdown image syntax and MDX media elements (img, audio, video) by adding attributes,
+ * figure captions, auto-linking to originals, supporting extended syntax for rich media and
+ * converting images to video/audio based on the file extension.
  */
 const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   const settings = Object.assign(
@@ -318,7 +317,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       node.properties.alt = undefined;
       node.properties.markedAsToBeTransformed = undefined;
 
-      const properties = structuredClone(node.properties); // TODO: filter accordingly
+      const properties = structuredClone(node.properties);
 
       if (settings.alwaysAddControlsForVideos && newTagName === "video") {
         properties["controls"] = true;
