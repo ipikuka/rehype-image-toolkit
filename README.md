@@ -24,7 +24,7 @@ That's why, while developing **`rehype-image-hack`**, I ensured that each featur
 + **Adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
 + **Adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
 + **Adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
-+ **Adding autolink to the original image** - Control which images should be automatically linked to their original source.
++ **Adding auto link to the original image** - Control which images should be automatically linked to their original source.
 
 ## Installation
 
@@ -47,7 +47,7 @@ Say we have the following markdown file, `example.md`:
 ```markdown
 It converts images to audio/videos. ![](video.mp4) 
 
-It adds autolink. ![alt]([https://example.com/image.png])
+It adds auto link. ![alt]([https://example.com/image.png])
 
 It adds caption. ![*Image Caption](image.png)
 
@@ -86,7 +86,7 @@ Now, running `node example.js` you will see.
   <source src="video.mp4" type="video/mp4" />
 </video>
 <p>
-  It adds autolink.
+  It adds auto link.
   <a href="https://example.com/image.png" target="_blank">
     <img src="https://example.com/image.png" alt="alt"/>
   </a>
@@ -109,7 +109,7 @@ Without `rehype-image-hack` the output would be:
   It converts images to audio/videos. <img src="video.mp4" alt="" />
 </p>
 <p>
-  It adds autolink. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
+  It adds auto link. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
 </p>
 <p>
   It adds caption. <img src="image.png" alt="*Image Caption" />
@@ -193,7 +193,7 @@ However, you may not need to specify attributes for images, videos and audio, as
 
 The width and height attributes on images are treated specially. When used without a unit, the unit is assumed to be pixels. However, any of the CSS unit identifiers can be used. There shouldn't be any space between the number and the unit. 
 
-### Create an autolink for images
+### Create an auto link for images
 
 **Wrap the link of the source in brackets.** It is valid for only if the image source starts with protokol-like links like **`http://`**, web sites start with **`www.`**, root relative links start with a slash **`/`** and if just an image name like **`image.png`**.
 
