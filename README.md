@@ -8,17 +8,17 @@
 [![typescript][badge-typescript]][url-typescript]
 [![license][badge-license]][url-license]
 
-This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances markdown image syntax and MDX media elements (`img`, `audio`, `video`) by adding attributes, figure captions, auto-linking to originals, supporting extended syntax for rich media and converting images to video/audio based on the file extension.**.
+This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances markdown image syntax and MDX media elements (`img`, `audio`, `video`) by adding attributes, figure captions, auto-linking to originals, supporting extended syntax for rich media and converting images to video/audio based on the file extension.**
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
-Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions. It also enhances images `<img>` by supporting additional attributes and custom directives for greater flexibility.
+Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for auto link to originals, wrapping media with `figure` and adding caption.
 
 ## When should I use this?
 
-As far as I can see, other Remark/Rehype plugins for Markdown images apply their features to all images within the content without offering selectivity. For example, I may not want every image to be wrapped in a `<figure>` element, have a caption, or be automatically linked to its original source. In some cases, I need certain images to be excluded from these transformations.
+As far as I can see, other Remark/Rehype plugins related with markdown images apply their features to all images within the content without offering selectivity. For example, I may not want every image to be wrapped in a `<figure>` element, have a caption, or be automatically linked to its original source. In some cases, I need certain images to be excluded from these transformations.
 
-That's why, when developing **`rehype-image-hack`**, I ensured that each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one for images"** approach to provide all the essential features related to Markdown image syntax in a single solution.
+That's why, while developing **`rehype-image-hack`**, I ensured that each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one for images"** approach to provide all the essential features related to Markdown image syntax in a single solution.
 
 **`rehype-image-hack`** is ideal for:
 + **Adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
@@ -102,7 +102,7 @@ Now, running `node example.js` you will see.
 </video>
 ```
 
-Without `rehype-image-hack`,
+Without `rehype-image-hack` the output would be:
 
 ```html
 <p>
@@ -171,14 +171,14 @@ Markdown’s image syntax supports an optional **`title`** attribute: **`![](ima
 
 However, you may not need to specify attributes for images, videos and audio, as you can override `<img>`, `<video>`, and `<audio>` elements by providing custom MDX components.
 
-**Use a simple syntax for width and hight using lowercase "x" chracter between**
+**Use a simple syntax for width and hight using lowercase "x" chracter between**.\
 *In this syntax, the pixel units should be a number, do not use `px`.*
 
 ```markdown
-// Both direction
+// Both dimension
 ![alt](image.png "> 640x480")
 
-// Both direction WRONG!
+// Both dimension WRONG!
 ![alt](image.png "> 640pxx480px") X WRONG!
 
 // Only width
@@ -187,15 +187,15 @@ However, you may not need to specify attributes for images, videos and audio, as
 // Only height
 ![alt](image.png "> x480")
 
-// Both direction, will go to the style attribute
+// Both dimension, will go to the style attribute
 ![alt](image.png "> 50%x10rem")
 ```
 
-The width and height attributes on images are treated specially. When used without a unit, the unit is assumed to be pixels. However, any of the CSS unit identifiers can be used. There must not be any spaces between the number and the unit. 
+The width and height attributes on images are treated specially. When used without a unit, the unit is assumed to be pixels. However, any of the CSS unit identifiers can be used. There shouldn't be any space between the number and the unit. 
 
-### Create an autolink for the images
+### Create an autolink for images
 
-Wrap the link of the source in brackets. It is valid for only if the image source starts with protokol-like links like `http://` or web site `www.` and root relative links starts with a slash `/` and if just a image name.
+**Wrap the link of the source in brackets.** It is valid for only if the image source starts with protokol-like links like **`http://`**, web sites start with **`www.`**, root relative links start with a slash **`/`** and if just an image name like **`image.png`**.
 
 ```markdown
 // pay attention to brackets around the link
