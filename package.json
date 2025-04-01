@@ -1,7 +1,7 @@
 {
   "name": "rehype-image-hack",
   "version": "0.1.0-beta",
-  "description": "Rehype plugin to enhance image/video/audio asset properties //TODO",
+  "description": "Rehype plugin to enhance markdown image syntax and MDX media elements (`img`, `audio`, `video`) by adding attributes, figure captions, auto-linking to originals, converting images to video/audio based on the file extension",
   "type": "module",
   "exports": "./dist/esm/index.js",
   "main": "./dist/esm/index.js",
