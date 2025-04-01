@@ -731,4 +731,40 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       "
     `);
   });
+
+  // ******************************************
+  it("example in the README", async () => {
+    const input = dedent`
+    It converts images to audio/videos. ![](video.mp4) 
+
+    It adds autolink. ![alt]([https://example.com/image.png])
+
+    It adds caption. ![*Image Caption](image.png)
+
+    It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
+  `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p>It converts images to audio/videos.</p>
+      <video><source src="video.mp4" type="video/mp4" /></video>
+      <p>
+        It adds autolink.
+        <a href="https://example.com/image.png" target="_blank"
+          ><img src="https://example.com/image.png" alt="alt"
+        /></a>
+      </p>
+      <p>It adds caption.</p>
+      <figure>
+        <img src="image.png" alt="Image Caption" />
+        <figcaption>Image Caption</figcaption>
+      </figure>
+      <p>It adds attributes.</p>
+      <video title="title" width="640" height="480" autoplay>
+        <source src="video.mp4" type="video/mp4" />
+      </video>
+      "
+    `);
+  });
 });
