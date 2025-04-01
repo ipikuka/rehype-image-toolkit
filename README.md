@@ -8,7 +8,7 @@
 [![typescript][badge-typescript]][url-typescript]
 [![license][badge-license]][url-license]
 
-This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhance something //TODO**.
+This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances markdown image syntax and MDX media elements (`img`, `audio`, `video`) by adding attributes, figure captions, auto-linking to originals, supporting extended syntax for rich media and converting images to video/audio based on the file extension.**.
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
@@ -21,10 +21,10 @@ As far as I can see, other Remark/Rehype plugins for Markdown images apply their
 That's why, when developing **`rehype-image-hack`**, I ensured that each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one for images"** approach to provide all the essential features related to Markdown image syntax in a single solution.
 
 **`rehype-image-hack`** is ideal for:
-+ **Embedding videos and audio using Markdown** – No need for HTML or custom MDX components.
-+ **Enhancing images/videos/audio with attributes** – Easily add classes, IDs, styles, and other attributes.
-+ **Adding `<figure>` and caption on demand** – // Choose which images/videos/audio should be wrapped in a <figure> element with an optional caption.
-+ **Adding autolink to the original image on demand** - // Control which images should be automatically linked to their original source.
++ **Adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
++ **Adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
++ **Adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
++ **Adding autolink to the original image** - Control which images should be automatically linked to their original source.
 
 ## Installation
 
@@ -40,19 +40,26 @@ or
 yarn add rehype-image-hack
 ```
 
-## Usage
+## Usage with markdown
 
 Say we have the following markdown file, `example.md`:
 
 ```markdown
+It converts images to audio/videos. ![](video.mp4) 
 
+It adds autolink. ![alt]([https://example.com/image.png])
+
+It adds caption. ![*Image Caption](image.png)
+
+It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
 ```
 
 Our module, `example.js`, looks as follows:
 
 ```javascript
 import { read } from "to-vfile";
-import remark from "remark";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import rehypeImageHack from "rehype-image-hack";
 import rehypeStringify from "rehype-stringify";
@@ -60,8 +67,8 @@ import rehypeStringify from "rehype-stringify";
 main();
 
 async function main() {
-  const file = await remark()
-    .use(gfm)
+  const file = await unified()
+    .use(remarkParse)
     .use(remarkRehype)
     .use(rehypeImageHack)
     .use(rehypeStringify)
@@ -71,17 +78,48 @@ async function main() {
 }
 ```
 
-Now, running `node example.js` you will see that //TODO.
+Now, running `node example.js` you will see.
 
 ```html
-
+<p>It converts images to audio/videos.</p>
+<video>
+  <source src="video.mp4" type="video/mp4" />
+</video>
+<p>
+  It adds autolink.
+  <a href="https://example.com/image.png" target="_blank">
+    <img src="https://example.com/image.png" alt="alt"/>
+  </a>
+</p>
+<p>It adds caption.</p>
+<figure>
+  <img src="image.png" alt="Image Caption" />
+  <figcaption>Image Caption</figcaption>
+</figure>
+<p>It adds attributes.</p>
+<video title="title" width="640" height="480" autoplay>
+  <source src="video.mp4" type="video/mp4" />
+</video>
 ```
 
-Without `rehype-image-hack`, //TODO.
+Without `rehype-image-hack`,
 
 ```html
-
+<p>
+  It converts images to audio/videos. <img src="video.mp4" alt="" />
+</p>
+<p>
+  It adds autolink. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
+</p>
+<p>
+  It adds caption. <img src="image.png" alt="*Image Caption" />
+</p>
+<p>
+  It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay" />
+</p>
 ```
+
+## Features
 
 ### Convert image syntax to videos and audio
 
@@ -241,25 +279,67 @@ All options are **optional** and have **default values**.
 
 ```typescript
 type ImageHackOptions = {
-  enable?: boolean; //TODO
+  figureCaptionPosition?: "above" | "below";
+  alwaysAddControlsForVideos?: boolean;
+  alwaysAddControlsForAudio?: boolean;
 };
 
 use(rehypeImageHack, ImageHackOptions);
 ```
 
-#### `//TODO`
+#### figureCaptionPosition
 
-It is a **boolean** option which is for //TODO
+It is a **"above" | "below"** union string option which is for placing the caption below or above of the asset.
 
-By default, it is `false`. //TODO
+By default, it is `below`.
 
 ```javascript
 use(rehypeImageHack, {
-  enable: true,
+  figureCaptionPosition: "above",
 });
 ```
 
-Now, //TODO.
+Now, the caption will be the above of the asset.
+
+#### alwaysAddControlsForVideos
+
+It is a **boolean** option which is for adding **`controls`** property to `video` elements by default. 
+
+By default, it is `false`.
+
+```javascript
+use(rehypeImageHack, {
+  alwaysAddControlsForVideos: true,
+});
+```
+
+Now, video elements will have `controls` attribute by default.
+
+```html
+<video controls>
+  <source src="example.mp4" type="video/mp4">
+</video>
+```
+
+#### alwaysAddControlsForAudio
+
+It is a **boolean** option which is for adding **`controls`** property to `audio` elements by default. 
+
+By default, it is `false`.
+
+```javascript
+use(rehypeImageHack, {
+  alwaysAddControlsForAudios: true,
+});
+```
+
+Now, audio elements will have `controls` attribute by default.
+
+```html
+<audio controls>
+  <source src="example.mp3" type="audio/mpeg">
+</audio>
+```
 
 ### Examples:
 
@@ -309,7 +389,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 - [`rehype-code-meta`](https://www.npmjs.com/package/rehype-code-meta)
   – Rehype plugin to copy `code.data.meta` to `code.properties.metastring`
 - [`rehype-image-hack`](https://www.npmjs.com/package/rehype-image-hack)
-  – Rehype plugin to enhance image/video/audio asset properties //TODO
+  – Rehype plugin to enhance markdown image syntax and MDX media elements (`img`, `audio`, `video`) by adding attributes, figure captions, auto-linking to originals, supporting extended syntax for rich media and converting images to video/audio based on the file extension.
 
 ### My Recma Plugins
 
@@ -354,7 +434,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 [badge-typescript]: https://img.shields.io/npm/types/rehype-image-hack
 [url-typescript]: https://www.typescriptlang.org
 
-[badge-codecov]: https://codecov.io/gh/ipikuka/rehype-image-hack/graph/badge.svg?token=
+[badge-codecov]: https://codecov.io/gh/ipikuka/rehype-image-hack/graph/badge.svg?token=5qXNZ8iuYV
 [url-codecov]: https://codecov.io/gh/ipikuka/rehype-image-hack
 
 [badge-type-coverage]: https://img.shields.io/badge/dynamic/json.svg?label=type-coverage&prefix=%E2%89%A5&suffix=%&query=$.typeCoverage.atLeast&uri=https%3A%2F%2Fraw.githubusercontent.com%2Fipikuka%2Frehype-image-hack%2Fmain%2Fpackage.json
