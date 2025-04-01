@@ -141,4 +141,26 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
       <p><img src="image.png" alt=""></p>"
     `);
   });
+
+  // *************************************
+  it("process html input", async () => {
+    const input = dedent`
+      <p>
+        It adds autolink.
+        <img src="[https://example.com/image.png]" alt="alt">
+      </p>
+      <p>
+        It adds caption.
+        <img src="image.png" alt="*Image Caption">
+      </p>
+      <p>
+        It adds attributes.
+        <img src="image.png" title="> 60x60">
+      </p>
+  `;
+
+    const output = String(await utils.processHtml(input));
+
+    expect(output).toBe(input);
+  });
 });
