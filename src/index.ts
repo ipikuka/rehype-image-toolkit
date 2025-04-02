@@ -14,7 +14,8 @@ declare module "hast" {
     src?: string;
     title?: string;
     alt?: string;
-    markedAsToBeTransformed?: string;
+    markedAsDoNotTransform?: boolean;
+    markedAsToBeAutoLinked?: boolean;
   }
 }
 
@@ -129,10 +130,31 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     // console.dir(tree, { depth: 8 });
 
     /**
+     * removes the brackets around the source for videos/audio since they will not be auto linked
+     * and marks the images as to be auto linked if there are brackets around the source
+     */
+    visit(tree, "element", function (node, index, parent): VisitorResult {
+      if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
+        return;
+      }
+
+      const src = node.properties.src;
+      const hasBracket = src && /%5B.*%5D/.test(src);
+
+      if (hasBracket) {
+        node.properties.src = src.slice(3, -3);
+
+        // if it is image and the parent is not anchor element
+        if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
+          node.properties.markedAsToBeAutoLinked = true;
+        }
+      }
+    });
+
+    /**
      * unravel image elements to be transformed or to be captioned in paragraphs;
      * and mark the elements to be transformed
      * and delete caption directives for other images
-     * and delete auto link directives for videos/audios
      *
      * mutates children !
      */
@@ -145,6 +167,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       for (let i = 0; i < node.children.length; i++) {
         const element = node.children[i];
+
         const isLastChild = i === node.children.length - 1;
 
         if (element.type === "element" && element.tagName === "img") {
@@ -165,29 +188,17 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             }
           }
 
-          let src: string | undefined;
-          const originalSrc = (src = element.properties.src);
-
-          const hasBracket = originalSrc && /%5B.*%5D/.test(originalSrc);
-          if (hasBracket) {
-            src = originalSrc.slice(3, -3);
-          }
-
+          const src = element.properties.src;
           const extension = getExtension(src);
           const needsTransformation =
             extension && (isVideoExt(extension) || isAudioExt(extension));
 
-          if (needsTransformation && hasBracket) {
-            // if has bracket but needs transformation (audio/video), remove brackets in src
-            element.properties.src = src;
-          }
-
-          if (needsTransformation && isLastChild) {
-            element.properties.markedAsToBeTransformed = isVideoExt(extension)
-              ? `video/${extension}`
-              : `audio/${extension}`;
-
-            elementToBeUnraveled ??= element;
+          if (needsTransformation) {
+            if (isLastChild) {
+              elementToBeUnraveled ??= element;
+            } else {
+              element.properties.markedAsDoNotTransform = true;
+            }
           }
         } else if (element.type === "element" && element.tagName === "a") {
           const subElement = element.children[0];
@@ -210,29 +221,17 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               }
             }
 
-            let src: string | undefined;
-            const originalSrc = (src = subElement.properties.src);
-
-            const hasBracket = originalSrc && /%5B.*%5D/.test(originalSrc);
-            if (hasBracket) {
-              src = originalSrc.slice(3, -3);
-            }
-
+            const src = subElement.properties.src;
             const extension = getExtension(src);
             const needsTransformation =
               extension && (isVideoExt(extension) || isAudioExt(extension));
 
-            if (needsTransformation && hasBracket) {
-              // if has bracket but needs transformation (audio/video), remove brackets in src
-              subElement.properties.src = src;
-            }
-
-            if (needsTransformation && isLastChild) {
-              subElement.properties.markedAsToBeTransformed = isVideoExt(extension)
-                ? `video/${extension}`
-                : `audio/${extension}`;
-
-              elementToBeUnraveled ??= element;
+            if (needsTransformation) {
+              if (isLastChild) {
+                elementToBeUnraveled ??= element;
+              } else {
+                subElement.properties.markedAsDoNotTransform = true;
+              }
             }
           }
         }
@@ -304,18 +303,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      const markedAsToBeTransformed = node.properties.markedAsToBeTransformed;
-      if (!markedAsToBeTransformed) return CONTINUE;
+      const marked = node.properties.markedAsDoNotTransform;
 
-      const [newTagName, extension] = markedAsToBeTransformed.split("/");
+      if (marked) {
+        node.properties.markedAsDoNotTransform = undefined;
+        return CONTINUE;
+      }
 
       const src = node.properties.src;
-      /* v8 ignore next */
-      if (!src) return CONTINUE; // just for type narrowing
+      const extension = getExtension(src);
+      const needsTransformation = extension && (isVideoExt(extension) || isAudioExt(extension));
+
+      if (!needsTransformation) return CONTINUE;
+
+      const newTagName = isVideoExt(extension) ? "video" : "audio";
 
       node.properties.src = undefined;
       node.properties.alt = undefined;
-      node.properties.markedAsToBeTransformed = undefined;
 
       const properties = structuredClone(node.properties);
 
@@ -416,18 +420,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         });
       }
 
-      const srcOriginal = node.properties.src;
-      if (!srcOriginal) return CONTINUE;
-
-      if (/%5B.*%5D/.test(srcOriginal)) {
-        // slice encoded brackets
-        const src = srcOriginal.slice(3, -3);
-        node.properties.src = src;
-
-        if (parent.type === "element" && parent.tagName === "a") {
-          // if the parent is already anchor link, just pass.
-          return CONTINUE;
-        }
+      if (node.properties.markedAsToBeAutoLinked) {
+        node.properties.markedAsToBeAutoLinked = undefined;
+        const src = node.properties.src;
 
         const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
         const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
@@ -436,14 +431,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Check if the src matches any of the types
         const isValidLink =
-          httpsRegex.test(src) ||
-          rootRelativeRegex.test(src) ||
-          wwwRegex.test(src) ||
-          fileLinkRegex.test(src);
+          httpsRegex.test(src!) ||
+          rootRelativeRegex.test(src!) ||
+          wwwRegex.test(src!) ||
+          fileLinkRegex.test(src!);
 
         // Check if the source refers to an image (by file extension)
         const imageFileRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
-        const isImage = imageFileRegex.test(src);
+        const isImage = imageFileRegex.test(src!);
 
         if (isValidLink && isImage) {
           parent.children[index] = {
