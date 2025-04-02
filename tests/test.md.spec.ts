@@ -723,6 +723,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
       [![+]([audio.mp3])](www.example.com)
 
+      [![+]([image.png]) ![+]([video.mp4]) ![+]([video.mp3])](www.example.com)
+
       [![]([image.png]) ![]([video.mp4]) ![]([video.mp3])](www.example.com)
     `;
 
@@ -736,6 +738,14 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <a href="www.example.com"
         ><figure>
           <audio><source src="audio.mp3" type="audio/mpeg" /></audio></figure
+      ></a>
+      <a href="www.example.com"
+        ><figure><img src="image.png" alt="" /></figure>
+        <figure>
+          <video><source src="video.mp4" type="video/mp4" /></video>
+        </figure>
+        <figure>
+          <audio><source src="video.mp3" type="audio/mpeg" /></audio></figure
       ></a>
       <p>
         <a href="www.example.com"
