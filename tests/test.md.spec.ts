@@ -194,7 +194,27 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("does NOT add caption and NOT transform, since it is NOT the last element in a paragraph", async () => {
+  it("does NOT transform, since it is NOT the last element in a paragraph", async () => {
+    const input = dedent`
+      ![](image.png "title") blocked text
+
+      ![](video.mp4 "title") blocked text
+
+      ![](audio.mp3 "title") blocked text
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="" title="title" /> blocked text</p>
+      <p><img src="video.mp4" alt="" title="title" /> blocked text</p>
+      <p><img src="audio.mp3" alt="" title="title" /> blocked text</p>
+      "
+    `);
+  });
+
+  // ******************************************
+  it("does NOT add caption, since it is NOT the last element in a paragraph", async () => {
     const input = dedent`
       ![*Caption of the image](image.png "title") blocked text
 
@@ -637,7 +657,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO, normally does nod add auto link if the parent as an anchor, but here the parent is figure
   // ******************************************
   it("do NOT add auto link, but add caption; which is already wrapped with a link", async () => {
     const input = dedent`
@@ -652,20 +671,17 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<a href="https://example.com"
-        ><figure>
-          <a href="image.png" target="_blank"
-            ><img src="image.png" alt="alt"
-          /></a></figure
+        ><figure><img src="image.png" alt="alt" /></figure
       ></a>
       <a href="https://example.com"
         ><figure>
-          <a href="image.png" target="_blank"><img src="image.png" alt="alt" /></a>
+          <img src="image.png" alt="alt" />
           <figcaption>alt</figcaption>
         </figure></a
       >
       <a href="https://example.com"
         ><figure>
-          <a href="image.png" target="_blank"><img src="image.png" alt="alt" /></a>
+          <img src="image.png" alt="alt" />
           <figcaption>alt</figcaption>
         </figure></a
       >
@@ -683,10 +699,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       ![+]([video.mp4])
 
       ![+]([audio.mp3])
-
-      [![+]([video.mp4])](www.example.com)
-
-      [![+]([audio.mp3])](www.example.com)
     `;
 
     const html = String(await processMd(input));
@@ -700,7 +712,24 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <figure>
         <audio><source src="audio.mp3" type="audio/mpeg" /></audio>
       </figure>
-      <a href="www.example.com"
+      "
+    `);
+  });
+
+  // ******************************************
+  it("do NOT auto link for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
+    const input = dedent`
+      [![+]([video.mp4])](www.example.com)
+
+      [![+]([audio.mp3])](www.example.com)
+
+      [![]([image.png]) ![]([video.mp4]) ![]([video.mp3])](www.example.com)
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<a href="www.example.com"
         ><figure>
           <video><source src="video.mp4" type="video/mp4" /></video></figure
       ></a>
@@ -708,6 +737,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         ><figure>
           <audio><source src="audio.mp3" type="audio/mpeg" /></audio></figure
       ></a>
+      <p>
+        <a href="www.example.com"
+          ><img src="image.png" alt="" />
+          <video><source src="video.mp4" type="video/mp4" /></video>
+          <audio><source src="video.mp3" type="audio/mpeg" /></audio
+        ></a>
+      </p>
       "
     `);
   });
