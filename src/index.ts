@@ -14,8 +14,11 @@ declare module "hast" {
     src?: string;
     title?: string;
     alt?: string;
-    markedAsDoNotTransform?: boolean;
     markedAsToBeAutoLinked?: boolean;
+    markedAsToBeInFigure?: boolean;
+    captionInFigure?: string;
+    markedAsToBeConverted?: boolean;
+    convertionString?: string;
   }
 }
 
@@ -139,14 +142,43 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
 
       const src = node.properties.src;
-      const hasBracket = src && /%5B.*%5D/.test(src);
 
+      const hasBracket = src && /%5B.*%5D/.test(src);
       if (hasBracket) {
         node.properties.src = src.slice(3, -3);
 
-        // if it is image and the parent is not anchor element
+        // mark if it is image and the parent is not anchor element
         if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
           node.properties.markedAsToBeAutoLinked = true;
+        }
+      }
+
+      const alt = node.properties.alt;
+      const startsWithPlus = alt?.startsWith("+");
+      const startsWithStar = alt?.startsWith("*");
+      const startsWithCaption = alt?.startsWith("caption:");
+      const needsCaption = startsWithCaption || startsWithStar || startsWithPlus;
+
+      if (alt && needsCaption) {
+        node.properties.markedAsToBeInFigure = true;
+
+        const figcaptionText = startsWithStar || startsWithPlus ? alt.slice(1) : alt.slice(8);
+        if (!startsWithPlus) node.properties.captionInFigure = figcaptionText;
+
+        if (node.tagName === "img") {
+          node.properties.alt = figcaptionText;
+        } else {
+          node.properties.alt = undefined;
+        }
+      }
+
+      const extension = getExtension(node.properties.src);
+      if (extension && node.tagName === "img") {
+        const needsTransformation = isVideoExt(extension) || isAudioExt(extension);
+
+        if (needsTransformation) {
+          node.properties.markedAsToBeConverted = true;
+          node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
         }
       }
     });
@@ -171,66 +203,43 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const isLastChild = i === node.children.length - 1;
 
         if (element.type === "element" && element.tagName === "img") {
-          const alt = element.properties.alt;
-          const startsWithPlus = alt?.startsWith("+");
-          const startsWithStar = alt?.startsWith("*");
-          const startsWithCaption = alt?.startsWith("caption:");
-          const needsCaption = startsWithCaption || startsWithStar || startsWithPlus;
-
-          if (alt && needsCaption) {
-            const figcaptionText =
-              startsWithStar || startsWithPlus ? alt.slice(1) : alt.slice(8);
-
+          if (element.properties.markedAsToBeInFigure) {
             if (isLastChild) {
               elementToBeUnraveled = element;
             } else {
-              element.properties.alt = figcaptionText;
+              element.properties.markedAsToBeInFigure = undefined;
+              element.properties.captionInFigure = undefined;
             }
           }
 
-          const src = element.properties.src;
-          const extension = getExtension(src);
-          const needsTransformation =
-            extension && (isVideoExt(extension) || isAudioExt(extension));
-
-          if (needsTransformation) {
+          if (element.properties.markedAsToBeConverted) {
             if (isLastChild) {
               elementToBeUnraveled ??= element;
             } else {
-              element.properties.markedAsDoNotTransform = true;
+              element.properties.markedAsToBeConverted = undefined;
+              element.properties.convertionString = undefined;
             }
           }
         } else if (element.type === "element" && element.tagName === "a") {
           const subElement = element.children[0];
 
           if (subElement.type === "element" && subElement.tagName === "img") {
-            const alt = subElement.properties.alt;
-            const startsWithPlus = alt?.startsWith("+");
-            const startsWithStar = alt?.startsWith("*");
-            const startsWithCaption = alt?.startsWith("caption:");
-            const needsCaption = startsWithCaption || startsWithStar || startsWithPlus;
-
-            if (alt && needsCaption) {
-              const figcaptionText =
-                startsWithStar || startsWithPlus ? alt.slice(1) : alt.slice(8);
-
+            if (subElement.properties.markedAsToBeInFigure) {
               if (isLastChild) {
                 elementToBeUnraveled = element;
               } else {
-                subElement.properties.alt = figcaptionText;
+                subElement.properties.markedAsToBeInFigure = undefined;
+                subElement.properties.captionInFigure = undefined;
               }
             }
 
-            const src = subElement.properties.src;
-            const extension = getExtension(src);
-            const needsTransformation =
-              extension && (isVideoExt(extension) || isAudioExt(extension));
-
-            if (needsTransformation) {
+            if (subElement.properties.markedAsToBeConverted) {
               if (isLastChild) {
                 elementToBeUnraveled ??= element;
+                /* v8 ignore next 4 */
               } else {
-                subElement.properties.markedAsDoNotTransform = true;
+                subElement.properties.markedAsToBeConverted = undefined;
+                subElement.properties.convertionString = undefined;
               }
             }
           }
@@ -260,33 +269,32 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      const alt = node.properties.alt;
-      const startsWithPlus = alt?.startsWith("+");
-      const startsWithStar = alt?.startsWith("*");
-      const startsWithCaption = alt?.startsWith("caption:");
-      const needsCaption = startsWithCaption || startsWithStar || startsWithPlus;
+      if (node.properties.markedAsToBeInFigure) {
+        const caption = node.properties.captionInFigure;
 
-      if (alt && needsCaption) {
-        const figcaptionText = startsWithStar || startsWithPlus ? alt.slice(1) : alt.slice(8);
-        node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
-
-        const figcaptionElement: Element = {
-          type: "element",
-          tagName: "figcaption",
-          properties: {},
-          children: [{ type: "text", value: figcaptionText }],
-        };
+        const figcaptionElement =
+          caption === undefined
+            ? undefined
+            : ({
+                type: "element",
+                tagName: "figcaption",
+                properties: {},
+                children: [{ type: "text", value: caption }],
+              } as Element);
 
         const figureElement: Element = {
           type: "element",
           tagName: "figure",
           properties: {},
-          children: !startsWithPlus
+          children: figcaptionElement
             ? settings.figureCaptionPosition === "above"
               ? [figcaptionElement, node]
               : [node, figcaptionElement]
             : [node],
         };
+
+        node.properties.markedAsToBeInFigure = undefined;
+        node.properties.captionInFigure = undefined;
 
         // replace the image with figure element
         parent.children.splice(index, 1, figureElement);
@@ -303,21 +311,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      const marked = node.properties.markedAsDoNotTransform;
+      const marked = node.properties.markedAsToBeConverted;
+      if (!marked) return CONTINUE;
 
-      if (marked) {
-        node.properties.markedAsDoNotTransform = undefined;
-        return CONTINUE;
-      }
+      const [newTagName, extension] = node.properties.convertionString!.split("/");
+      node.properties.markedAsToBeConverted = undefined;
+      node.properties.convertionString = undefined;
 
       const src = node.properties.src;
-      const extension = getExtension(src);
-      const needsTransformation = extension && (isVideoExt(extension) || isAudioExt(extension));
-
-      if (!needsTransformation) return CONTINUE;
-
-      const newTagName = isVideoExt(extension) ? "video" : "audio";
-
       node.properties.src = undefined;
       node.properties.alt = undefined;
 
