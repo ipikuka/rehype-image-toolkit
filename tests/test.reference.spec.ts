@@ -143,6 +143,88 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
   });
 
   // *************************************
+  it("process markdown input, image first", async () => {
+    const input = dedent`
+      <img alt="*Image Caption" src="image.png">
+      <video alt="*Video Caption" src="video.mp4"></video>
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+      <p>hello</p>
+    `;
+
+    const html = String(await utils.processMdRaw(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img alt="*Image Caption" src="image.png">
+      <video alt="*Video Caption" src="video.mp4"></video>
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+      <p>hello</p>"
+    `);
+  });
+
+  // *************************************
+  it("process markdown input, video first --> causes wrap with p", async () => {
+    const input = dedent`
+      <video alt="*Video Caption" src="video.mp4"></video>
+      <img alt="*Image Caption" src="image.png">
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+      <p>hello</p>
+    `;
+
+    const html = String(await utils.processMdRaw(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><video alt="*Video Caption" src="video.mp4"></video>
+      <img alt="*Image Caption" src="image.png">
+      <audio alt="*Audio Caption" src="audio.mp3"></audio></p>
+      <p>hello</p>"
+    `);
+  });
+
+  // *************************************
+  it("process markdown input, all html with blank lines, image first", async () => {
+    const input = dedent`
+      <img alt="*Image Caption" src="image.png">
+
+      <video alt="*Video Caption" src="video.mp4"></video>
+
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+
+      <p>hello</p>
+    `;
+
+    const html = String(await utils.processMdRaw(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img alt="*Image Caption" src="image.png">
+      <p><video alt="*Video Caption" src="video.mp4"></video></p>
+      <p><audio alt="*Audio Caption" src="audio.mp3"></audio></p>
+      <p>hello</p>"
+    `);
+  });
+
+  // *************************************
+  it("process markdown input, all html with blank lines, video first", async () => {
+    const input = dedent`
+      <video alt="*Video Caption" src="video.mp4"></video>
+
+      <img alt="*Image Caption" src="image.png">
+
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+
+      <p>hello</p>
+    `;
+
+    const html = String(await utils.processMdRaw(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><video alt="*Video Caption" src="video.mp4"></video></p>
+      <img alt="*Image Caption" src="image.png">
+      <p><audio alt="*Audio Caption" src="audio.mp3"></audio></p>
+      <p>hello</p>"
+    `);
+  });
+
+  // *************************************
   it("process html input", async () => {
     const input = dedent`
       <p>
