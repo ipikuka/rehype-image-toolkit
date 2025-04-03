@@ -131,6 +131,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
   function getLeadingWhitespace(text: string) {
     const match = text.match(RE_LEADING_WHITESPACE);
+    /* v8 ignore next */
     return match ? match[1] : "";
   }
 
