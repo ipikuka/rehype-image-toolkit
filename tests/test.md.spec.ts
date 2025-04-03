@@ -34,7 +34,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO
   // ******************************************
   it("handle basic images / videos / audio", async () => {
     const input = dedent`
@@ -279,15 +278,17 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO
+  // TODO, video or audio may also be in a paragraph, unravel also video/audio elements
   // ******************************************
   it("handle caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img alt="*Image Caption" src="image.png">
 
-      <video alt="*Video Caption" src="image.png">
+      <video alt="*Video Caption" src="video.mp4"></video>
 
-      <audio alt="*Audio Caption" src="image.png">
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+
+      <p>hello</p>
     `;
 
     const html = String(await processMdRawFirst(input));
@@ -297,15 +298,19 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <img alt="Image Caption" src="image.png" />
         <figcaption>Image Caption</figcaption>
       </figure>
-      <figure>
-        <video src="image.png">
-          <figure>
-            <audio src="image.png"></audio>
-            <figcaption>Audio Caption</figcaption>
-          </figure>
-        </video>
-        <figcaption>Video Caption</figcaption>
-      </figure>
+      <p>
+        <figure>
+          <video src="video.mp4"></video>
+          <figcaption>Video Caption</figcaption>
+        </figure>
+      </p>
+      <p>
+        <figure>
+          <audio src="audio.mp3"></audio>
+          <figcaption>Audio Caption</figcaption>
+        </figure>
+      </p>
+      <p>hello</p>
       "
     `);
   });
