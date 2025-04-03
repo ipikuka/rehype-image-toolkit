@@ -10,15 +10,15 @@ describe("reyhpe-image-hack, with html sources", () => {
     const input = dedent`
       <p>
         It adds autolink.
-        <img src="[https://example.com/image.png]" alt="alt">
+        <img src="[https://example.com/image.png]" alt="alt"/>
       </p>
       <p>
         It adds caption.
-        <img src="image.png" alt="*Image Caption">
+        <img src="image.png" alt="*Image Caption"/>
       </p>
       <p>
         It adds attributes.
-        <img src="image.png" title="title > 60x60">
+        <img src="image.png" title="title > 60x60"/>
       </p>
     `;
 
@@ -67,7 +67,6 @@ describe("reyhpe-image-hack, simple", () => {
     expect(html).toMatchInlineSnapshot(output);
   });
 
-  // TODO
   // *************************************
   it("process html input, example in the README", async () => {
     const input = dedent`
