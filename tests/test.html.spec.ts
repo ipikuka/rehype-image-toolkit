@@ -5,7 +5,6 @@ import dedent from "dedent";
 import { processHtml } from "./util";
 
 describe("reyhpe-image-hack, with html sources", () => {
-  // TODO
   // *************************************
   it("process html input, example in the README", async () => {
     const input = dedent`
@@ -19,24 +18,24 @@ describe("reyhpe-image-hack, with html sources", () => {
       </p>
       <p>
         It adds attributes.
-        <img src="image.png" title="> 60x60">
+        <img src="image.png" title="title > 60x60">
       </p>
-  `;
+    `;
 
     const html = String(await processHtml(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<p>
         It adds autolink.
-        <img src="[https://example.com/image.png]" alt="alt">
+        <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a>
       </p>
       <p>
         It adds caption.
-        <img src="image.png" alt="Image Caption">
       </p>
+      <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
       <p>
         It adds attributes.
-        <img src="image.png" width="60" height="60">
+        <img src="image.png" title="title" width="60" height="60">
       </p>"
     `);
   });
@@ -83,9 +82,7 @@ describe("reyhpe-image-hack, simple", () => {
 
     expect(html).toMatchInlineSnapshot(`
       "<h4>Title</h4>
-      <p>
-        <img src="image.png" alt="Image Caption">
-      </p>
+      <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
       <figure><img src="image.png" alt="Image Alt"></figure>"
     `);
   });
