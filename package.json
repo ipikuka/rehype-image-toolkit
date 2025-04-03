@@ -14,6 +14,7 @@
     "test": "vitest --watch=false",
     "test:watch": "vitest",
     "test:md": "vitest test.md.spec.ts",
+    "test:html": "vitest test.html.spec.ts",
     "test:mdx": "vitest test.mdx.spec.ts",
     "test:ref": "vitest test.reference.spec.ts",
     "test:refmdx": "vitest test.reference.mdx.spec.ts",
@@ -42,9 +43,11 @@
     "rehype image",
     "rehype video",
     "rehype audio",
+    "rehype-figure",
     "rehype plugin image",
     "rehype plugin video",
-    "rehype plugin audio"
+    "rehype plugin audio",
+    "rehype plugin figure"
   ],
   "author": "ipikuka <talatkuyuk@gmail.com>",
   "license": "MIT",
