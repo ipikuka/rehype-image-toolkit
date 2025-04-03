@@ -133,8 +133,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     // console.dir(tree, { depth: 8 });
 
     /**
-     * removes the brackets around the source for videos/audio since they will not be auto linked
-     * and marks the images as to be auto linked if there are brackets around the source
+     * visit for preperation
+     *
+     * removes the brackets around the videos/audio sources since they will not be auto linked
+     * marks the images as to be auto linked if there are brackets around the source
+     * marks the images/videos/audio as to be wrapped in a figure and set/remove the captions
+     * marks the images as to be converted into videos/audio based on the source extension
+     *
+     * doesn't mutates the children
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
@@ -174,9 +180,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       const extension = getExtension(node.properties.src);
       if (extension && node.tagName === "img") {
-        const needsTransformation = isVideoExt(extension) || isAudioExt(extension);
+        const needsConversion = isVideoExt(extension) || isAudioExt(extension);
 
-        if (needsTransformation) {
+        if (needsConversion) {
           node.properties.markedAsToBeConverted = true;
           node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
         }
@@ -184,9 +190,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * unravel image elements to be transformed or to be captioned in paragraphs;
-     * and mark the elements to be transformed
-     * and delete caption directives for other images
+     * unravels image elements to be converted into video/audio or to be wrapped with figure in paragraphs
      *
      * mutates children !
      */
@@ -205,7 +209,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         if (element.type === "element" && element.tagName === "img") {
           if (element.properties.markedAsToBeInFigure) {
             if (isLastChild) {
-              elementToBeUnraveled = element;
+              elementToBeUnraveled ??= element;
             } else {
               element.properties.markedAsToBeInFigure = undefined;
               element.properties.captionInFigure = undefined;
@@ -226,7 +230,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           if (subElement.type === "element" && subElement.tagName === "img") {
             if (subElement.properties.markedAsToBeInFigure) {
               if (isLastChild) {
-                elementToBeUnraveled = element;
+                elementToBeUnraveled ??= element;
               } else {
                 subElement.properties.markedAsToBeInFigure = undefined;
                 subElement.properties.captionInFigure = undefined;
@@ -260,7 +264,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * add caption for the assets wrapping with <figure> element
+     * wraps marked images/videos/audio with <figure> element and add caption
      *
      * mutates children !
      */
@@ -302,7 +306,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * transform image syntax to <video> / <audio> elements
+     * converts marked images into to <video> / <audio> elements
      *
      * mutates children !
      */
@@ -354,9 +358,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * add additional properties into assets utilizing the title prop
+     * adds additional properties into assets utilizing the title attribute
+     * adds auto link for images not videos and audio
      *
-     * add auto link for images not videos and audio.
+     * doesn't mutate the children
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
