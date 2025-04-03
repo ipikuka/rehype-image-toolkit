@@ -40,7 +40,7 @@ or
 yarn add rehype-image-hack
 ```
 
-## Usage with markdown
+## Usage with markdown source
 
 Say we have the following markdown file, `example.md`:
 
@@ -119,6 +119,66 @@ Without `rehype-image-hack` the output would be:
 </p>
 ```
 
+## Usage with html source
+
+Actually, you don't need to use **`rehype-image-hack`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
+
+Say `example.html` looks as follows:
+
+```html
+<p>
+  It adds autolink.
+  <img src="[https://example.com/image.png]" alt="alt"/>
+</p>
+<p>
+  It adds caption.
+  <img src="image.png" alt="*Image Caption"/>
+</p>
+<p>
+  It adds attributes.
+  <img src="image.png" title="title > 60x60"/>
+</p>
+```
+
+Our module, `example.js`, looks as follows:
+
+```javascript
+import { read } from "to-vfile";
+import { unified } from "unified";
+import rehypeParse from "rehype-parse";
+import rehypeImageHack from "rehype-image-hack";
+import rehypeStringify from "rehype-stringify";
+
+main();
+
+async function main() {
+  const file = await unified()
+    .use(rehypeParse, { fragment: true })
+    .use(rehypeImageHack)
+    .use(rehypeStringify)
+    .process(await read("example.md"));
+
+  console.log(String(file));
+}
+```
+
+Now, running `node example.js` you will see.
+
+```html
+<p>
+  It adds autolink.
+  <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a>
+</p>
+<p>
+  It adds caption.
+</p>
+<figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
+<p>
+  It adds attributes.
+  <img src="image.png" title="title" width="60" height="60">
+</p>
+```
+
 ## Features
 
 ### Convert image syntax to videos and audio
@@ -141,13 +201,13 @@ Markdown lacks built-in support for video and audio, only providing syntax for i
 </audio>
 ```
 
-Since `<video>` and `<audio>` elements are block-level by default, the syntax will be transformed only if it is the sole child in a paragraph, or the last of the child; otherwise will not be transformed.
+Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** extracts them from paragraphs, splitting the text or other content around their original positions.
 
 ### Use the `title` attribute to customize images, videos, and audio
 
 Markdown’s image syntax supports an optional **`title`** attribute: **`![](image.png "title")`**
 
-**`rehype-image-hack`** extends this by recognizing **custom directives after greater operator (`>`)** in title.
+**`rehype-image-hack`** extends this by recognizing custom directives after **greater operator (`>`)** in title.
 
 ```markdown
 ![](my-video.mp4 "Video Title > controls autoplay loop .classname #id width=640 height=480")
@@ -171,7 +231,7 @@ Markdown’s image syntax supports an optional **`title`** attribute: **`![](ima
 
 However, you may not need to specify attributes for images, videos and audio, as you can override `<img>`, `<video>`, and `<audio>` elements by providing custom MDX components.
 
-**Use a simple syntax for width and hight using lowercase "x" chracter between**.\
+**Use a simple syntax for width and hight using lowercase "x" character between**.\
 *In this syntax, the pixel units should be a number, do not use `px`.*
 
 ```markdown
@@ -187,7 +247,7 @@ However, you may not need to specify attributes for images, videos and audio, as
 // Only height
 ![alt](image.png "> x480")
 
-// Both dimension, will go to the style attribute
+// Both dimension, other than px unit will go to the style attribute
 ![alt](image.png "> 50%x10rem")
 ```
 
@@ -212,7 +272,9 @@ will produce the output below:
 
 ### Add caption for images/videos/audio (Explicit Figures)
 
-Add a star **`*`** or **`caption:`** directives to the alt attribute in the beginning. It is valid for only if the asset is the sole child of an paragraph, or the last of the child otherwise the star **`*`** or/and **`caption:`** directive will be removed and will still be an inline image without caption.
+Add a star **`*`** or **`caption:`** directives to the alt attribute in the beginning in order to wrap the media asset with `<figure>` element.
+
+Since `<figure>` is block-level element by default, **`rehype-image-hack`** extracts it from paragraphs, splitting the text or other content around their original position.
 
 ```markdown
 ![*Caption of the image](image.png "title")
@@ -229,30 +291,12 @@ will produce the same html output:
 </figure>
 ```
 
-Consider, the image is the last thing in the paragraph.
-
-```markdown
-Here is the image. ![*Caption of the image](image.png "title")
-
-Here is the image. ![caption:Caption of the image](image.png "title")
-```
-
-will produce the same html output:
-
-```html
-<p>Here is the image.</p>
-<figure>
-  <img src="image.png" alt="Caption of the image" title="title" />
-  <figcaption>Caption of the image</figcaption>
-</figure>
-```
-
-If you want to wrap the asset with `<figure>` element but not to include a caption; add plus **`+`** directive to the alt attribue in the begining.
+If you want to wrap the asset with `<figure>` element but not to include a caption, add plus **`+`** directive to the alt attribue in the begining.
 
 ```markdown
 ![+alt](image.png "title")
 
-Here is the image. ![+alt](image.png "title")
+![+](video.mp4 "title")
 ```
 
 will produce the html output:
@@ -261,17 +305,22 @@ will produce the html output:
 <figure>
   <img src="image.png" alt="alt" title="title" />
 </figure>
-<p>Here is the image.</p>
 <figure>
-  <img src="image.png" alt="alt" title="title" />
+  <video title="title">
+    <source src="video.mp4" type="video/mp4">
+  </video>
 </figure>
 ```
 
-If you just want a regular inline image, just make sure it is not the sole or the last thing in the paragraph or do not use any `caption:` or `*` or `+` directives in the begining.
+If you just want a regular inline image, do not use any `caption:` or `*` or `+` directives in the begining.
 
 ```markdown
-![This image won't be within a figure and no caption](image.png)
+![This image won't be within a figure element](image.png)
 ```
+
+## Summary of directives
+
+// TODO
 
 ## Options
 
