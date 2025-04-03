@@ -1,5 +1,5 @@
 import type { Plugin } from "unified";
-import type { Element, Root } from "hast";
+import type { Element, Root, RootContent, Text } from "hast";
 import { CONTINUE, visit, type VisitorResult } from "unist-util-visit";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -126,6 +126,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     options,
   ) as PartiallyRequiredImageHackOptions;
 
+  const RE_LEADING_WHITESPACE = /^(\s*)/;
+  const RE_TRAILING_WHITESPACE = /(\s*)$/;
+
+  function getLeadingWhitespace(text: string) {
+    const match = text.match(RE_LEADING_WHITESPACE);
+    return match ? match[1] : "";
+  }
+
   /**
    * Transform.
    */
@@ -149,9 +157,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       const src = node.properties.src;
 
-      const hasBracket = src && /%5B.*%5D/.test(src);
-      if (hasBracket) {
-        node.properties.src = src.slice(3, -3);
+      const hasBracket3 = src && /%5B.*%5D/.test(src);
+      const hasBracket1 = src && /\[.*\]/.test(src);
+      if (hasBracket1 || hasBracket3) {
+        node.properties.src = hasBracket1 ? src.slice(1, -1) : src.slice(3, -3);
 
         // mark if it is image and the parent is not anchor element
         if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
@@ -179,13 +188,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
 
       const extension = getExtension(node.properties.src);
-      if (extension && node.tagName === "img") {
-        const needsConversion = isVideoExt(extension) || isAudioExt(extension);
-
-        if (needsConversion) {
-          node.properties.markedAsToBeConverted = true;
-          node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
-        }
+      const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+      if (needsConversion && node.tagName === "img") {
+        node.properties.markedAsToBeConverted = true;
+        node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
       }
     });
 
@@ -194,73 +200,96 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
      *
      * mutates children !
      */
-    visit(tree, "element", function (node, index, parent): VisitorResult {
+    visit(tree, "element", function (node, index, parent) {
       if (!parent || index === undefined || node.tagName !== "p") {
         return;
       }
 
-      let elementToBeUnraveled: Element | undefined;
+      const newNodes: RootContent[] = [];
+      let hasNonWhitespace = false;
+      let currentParagraph: Element = {
+        type: "element",
+        tagName: "p",
+        properties: {},
+        children: [],
+      };
 
-      for (let i = 0; i < node.children.length; i++) {
-        const element = node.children[i];
+      let happened = false;
+      let referenceToLastTextElement: Text | undefined;
 
-        const isLastChild = i === node.children.length - 1;
-
-        if (element.type === "element" && element.tagName === "img") {
-          if (element.properties.markedAsToBeInFigure) {
-            if (isLastChild) {
-              elementToBeUnraveled ??= element;
-            } else {
-              element.properties.markedAsToBeInFigure = undefined;
-              element.properties.captionInFigure = undefined;
-            }
-          }
-
-          if (element.properties.markedAsToBeConverted) {
-            if (isLastChild) {
-              elementToBeUnraveled ??= element;
-            } else {
-              element.properties.markedAsToBeConverted = undefined;
-              element.properties.convertionString = undefined;
-            }
-          }
-        } else if (element.type === "element" && element.tagName === "a") {
-          const subElement = element.children[0];
-
-          if (subElement.type === "element" && subElement.tagName === "img") {
-            if (subElement.properties.markedAsToBeInFigure) {
-              if (isLastChild) {
-                elementToBeUnraveled ??= element;
-              } else {
-                subElement.properties.markedAsToBeInFigure = undefined;
-                subElement.properties.captionInFigure = undefined;
-              }
-            }
-
-            if (subElement.properties.markedAsToBeConverted) {
-              if (isLastChild) {
-                elementToBeUnraveled ??= element;
-                /* v8 ignore next 4 */
-              } else {
-                subElement.properties.markedAsToBeConverted = undefined;
-                subElement.properties.convertionString = undefined;
-              }
-            }
-          }
+      function pushCurrentParagraph() {
+        if (hasNonWhitespace) {
+          newNodes.push(currentParagraph);
         }
+
+        hasNonWhitespace = false;
+        currentParagraph = {
+          type: "element",
+          tagName: "p",
+          properties: {},
+          children: [],
+        };
       }
 
-      if (elementToBeUnraveled) {
-        if (node.children.length === 1) {
-          // replace the node paragraph with the image
-          parent.children.splice(index, 1, elementToBeUnraveled);
+      for (const element of node.children) {
+        const isImage = element.type === "element" && element.tagName === "img";
+        const isAnchorWithImage =
+          element.type === "element" &&
+          element.tagName === "a" &&
+          element.children.length === 1 &&
+          element.children[0].type === "element" &&
+          element.children[0].tagName === "img";
+
+        const subElement = isAnchorWithImage ? (element.children[0] as Element) : null;
+
+        if (
+          (isImage &&
+            "properties" in element &&
+            (element.properties.markedAsToBeInFigure ||
+              element.properties.markedAsToBeConverted)) ||
+          (subElement &&
+            "properties" in subElement &&
+            (subElement.properties.markedAsToBeInFigure ||
+              subElement.properties.markedAsToBeConverted))
+        ) {
+          happened = true;
+          const prevHasNonWhitespace = hasNonWhitespace;
+
+          pushCurrentParagraph(); // it may toggle the hasNonWhitespace
+
+          if (prevHasNonWhitespace) {
+            newNodes.push({ type: "text", value: "\n" }, element);
+          } else {
+            newNodes.push(element);
+          }
+
+          pushCurrentParagraph();
         } else {
-          // move the image after node paragraph
-          parent.children.splice(index + 1, 0, elementToBeUnraveled);
-          // remove the image from node paragraph
-          node.children.pop();
+          if (happened && element.type === "text") {
+            happened = false;
+            const leadingWhitespace = getLeadingWhitespace(element.value);
+            element.value.replace(RE_LEADING_WHITESPACE, "");
+
+            if (referenceToLastTextElement) {
+              referenceToLastTextElement.value = referenceToLastTextElement.value.replace(
+                RE_TRAILING_WHITESPACE,
+                leadingWhitespace,
+              );
+            }
+          }
+          if (!(element.type === "text" && element.value === "")) {
+            currentParagraph.children.push(element);
+            if (element.type === "text") referenceToLastTextElement = element;
+          }
+
+          if (!(element.type === "text" && !element.value.trim())) {
+            hasNonWhitespace = true;
+          }
         }
       }
+
+      pushCurrentParagraph();
+      parent.children.splice(index, 1, ...newNodes);
     });
 
     /**
