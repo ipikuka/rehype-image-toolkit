@@ -34,6 +34,33 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
+  // TODO
+  // ******************************************
+  it("handle basic images / videos / audio", async () => {
+    const input = dedent`
+      See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p>See the figure below.</p>
+      <figure>
+        <img src="image.png" alt="Caption" />
+        <figcaption>Caption</figcaption>
+      </figure>
+      <p>
+        Here is the small icons <img src="image1.png" alt="" />
+        <img src="image2.png" alt="" /> You see the video and sound below.
+      </p>
+      <video><source src="video.mp4" type="video/mp4" /></video
+      ><audio><source src="audio.mp3" type="audio/mpeg" /></audio>
+      <p>Both video and audio tell the truth.</p>
+      "
+    `);
+  });
+
   // ******************************************
   it("handle caption for images", async () => {
     const input = dedent`
@@ -194,47 +221,60 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("does NOT transform, since it is NOT the last element in a paragraph", async () => {
+  it("transform, even it is not last element in a paragraph", async () => {
     const input = dedent`
-      ![](image.png "title") blocked text
+      Hi ![](image.png "title") text
 
-      ![](video.mp4 "title") blocked text
+      Hi ![](video.mp4 "title") text
 
-      ![](audio.mp3 "title") blocked text
+      Hi ![](audio.mp3 "title") text
     `;
 
     const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt="" title="title" /> blocked text</p>
-      <p><img src="video.mp4" alt="" title="title" /> blocked text</p>
-      <p><img src="audio.mp3" alt="" title="title" /> blocked text</p>
+      "<p>Hi <img src="image.png" alt="" title="title" /> text</p>
+      <p>Hi</p>
+      <video title="title"><source src="video.mp4" type="video/mp4" /></video>
+      <p>text</p>
+      <p>Hi</p>
+      <audio title="title"><source src="audio.mp3" type="audio/mpeg" /></audio>
+      <p>text</p>
       "
     `);
   });
 
   // ******************************************
-  it("does NOT add caption, since it is NOT the last element in a paragraph", async () => {
+  it("add caption, even it is not the last element in a paragraph", async () => {
     const input = dedent`
-      ![*Caption of the image](image.png "title") blocked text
+      Hi ![*Caption of the image](image.png "title") text
 
-      ![*Caption of the video](video.mp4 "title") blocked text
+      Hi ![*Caption of the video](video.mp4 "title") text
 
-      ![*Caption of the audio](audio.mp3 "title") blocked text
+      Hi ![*Caption of the audio](audio.mp3 "title") text
     `;
 
     const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p>
-        <img src="image.png" alt="Caption of the image" title="title" /> blocked text
-      </p>
-      <p>
-        <img src="video.mp4" alt="Caption of the video" title="title" /> blocked text
-      </p>
-      <p>
-        <img src="audio.mp3" alt="Caption of the audio" title="title" /> blocked text
-      </p>
+      "<p>Hi</p>
+      <figure>
+        <img src="image.png" alt="Caption of the image" title="title" />
+        <figcaption>Caption of the image</figcaption>
+      </figure>
+      <p>text</p>
+      <p>Hi</p>
+      <figure>
+        <video title="title"><source src="video.mp4" type="video/mp4" /></video>
+        <figcaption>Caption of the video</figcaption>
+      </figure>
+      <p>text</p>
+      <p>Hi</p>
+      <figure>
+        <audio title="title"><source src="audio.mp3" type="audio/mpeg" /></audio>
+        <figcaption>Caption of the audio</figcaption>
+      </figure>
+      <p>text</p>
       "
     `);
   });
@@ -635,24 +675,29 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add auto link which is already wrapped with a link, (no caption since not the last)", async () => {
+  it("do NOT add auto link which is already wrapped with a link", async () => {
     const input = dedent`
-      [![+alt]([image.png])](https://example.com) blocked text
+      Hi [![+alt]([image.png])](https://example.com) text
 
-      [![*alt]([image.png])](https://example.com) blocked text
+      Hi [![*alt]([image.png])](https://example.com) text
     `;
 
     const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p>
-        <a href="https://example.com"><img src="image.png" alt="alt" /></a> blocked
-        text
-      </p>
-      <p>
-        <a href="https://example.com"><img src="image.png" alt="alt" /></a> blocked
-        text
-      </p>
+      "<p>Hi</p>
+      <a href="https://example.com"
+        ><figure><img src="image.png" alt="alt" /></figure
+      ></a>
+      <p>text</p>
+      <p>Hi</p>
+      <a href="https://example.com"
+        ><figure>
+          <img src="image.png" alt="alt" />
+          <figcaption>alt</figcaption>
+        </figure></a
+      >
+      <p>text</p>
       "
     `);
   });
@@ -716,6 +761,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
+  // TODO
   // ******************************************
   it("do NOT auto link for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
@@ -739,14 +785,16 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         ><figure>
           <audio><source src="audio.mp3" type="audio/mpeg" /></audio></figure
       ></a>
-      <a href="www.example.com"
-        ><figure><img src="image.png" alt="" /></figure>
-        <figure>
-          <video><source src="video.mp4" type="video/mp4" /></video>
-        </figure>
-        <figure>
-          <audio><source src="video.mp3" type="audio/mpeg" /></audio></figure
-      ></a>
+      <p>
+        <a href="www.example.com"
+          ><figure><img src="image.png" alt="" /></figure>
+          <figure>
+            <video><source src="video.mp4" type="video/mp4" /></video>
+          </figure>
+          <figure>
+            <audio><source src="video.mp3" type="audio/mpeg" /></audio></figure
+        ></a>
+      </p>
       <p>
         <a href="www.example.com"
           ><img src="image.png" alt="" />
