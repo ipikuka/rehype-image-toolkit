@@ -86,21 +86,24 @@ describe("reyhpe-image-hack, simple", () => {
     `);
   });
 
-  // TODO: auto link should cover only image or figure completely, cover all figure, open an issue
   // *************************************
   it("process html input, add autolink", async () => {
     const input = dedent`
       <img src="[image.png]" alt="alt">
+      <img src="(image.png)" alt="alt">
+
       <img src="[image.png]" alt="*caption">
-      <img src="{image.png}" alt="*caption">
+      <img src="(image.png)" alt="*caption">
     `;
 
     const html = String(await processHtml(input));
 
     expect(html).toMatchInlineSnapshot(`
       "<a href="image.png" target="_blank"><img src="image.png" alt="alt"></a>
-      <figure><a href="image.png" target="_blank"><img src="image.png" alt="caption"></a><figcaption>caption</figcaption></figure>
-      <figure><img src="{image.png}" alt="caption"><figcaption>caption</figcaption></figure>"
+      <a href="image.png" target="_blank"><img src="image.png" alt="alt"></a>
+
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="caption"><figcaption>caption</figcaption></figure></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="caption"></a><figcaption>caption</figcaption></figure>"
     `);
   });
 });
