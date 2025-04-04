@@ -68,7 +68,7 @@ describe("reyhpe-image-hack, simple", () => {
   });
 
   // *************************************
-  it("process html input, example in the README", async () => {
+  it("process html input, preserve whitespaces", async () => {
     const input = dedent`
       <h4>Title</h4>
       <p>
@@ -83,6 +83,24 @@ describe("reyhpe-image-hack, simple", () => {
       "<h4>Title</h4>
       <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
       <figure><img src="image.png" alt="Image Alt"></figure>"
+    `);
+  });
+
+  // TODO: auto link should cover only image or figure completely, cover all figure, open an issue
+  // *************************************
+  it("process html input, add autolink", async () => {
+    const input = dedent`
+      <img src="[image.png]" alt="alt">
+      <img src="[image.png]" alt="*caption">
+      <img src="{image.png}" alt="*caption">
+    `;
+
+    const html = String(await processHtml(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<a href="image.png" target="_blank"><img src="image.png" alt="alt"></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="caption"></a><figcaption>caption</figcaption></figure>
+      <figure><img src="{image.png}" alt="caption"><figcaption>caption</figcaption></figure>"
     `);
   });
 });

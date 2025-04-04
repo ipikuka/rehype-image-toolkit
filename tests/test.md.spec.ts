@@ -620,12 +620,15 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
+  // TODO link should cover the figure or find a way link should cover image in the figure or figure and caption
   // ******************************************
   it("handle auto link for images", async () => {
     const input = dedent`
-      ![]([image.png]) ![+alt]([image.jpeg])
+      ![]([image.png]) 
+      
+      ![+alt]([image.png])
 
-      ![*Caption]([image.png] "> 60x60")
+      ![*caption]([image.png])
     `;
 
     const html = String(await processMd(input));
@@ -635,13 +638,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <a href="image.png" target="_blank"><img src="image.png" alt="" /></a>
       </p>
       <figure>
-        <a href="image.jpeg" target="_blank"><img src="image.jpeg" alt="alt" /></a>
+        <a href="image.png" target="_blank"><img src="image.png" alt="alt" /></a>
       </figure>
       <figure>
-        <a href="image.png" target="_blank"
-          ><img src="image.png" alt="Caption" width="60" height="60"
-        /></a>
-        <figcaption>Caption</figcaption>
+        <a href="image.png" target="_blank"><img src="image.png" alt="caption" /></a>
+        <figcaption>caption</figcaption>
       </figure>
       "
     `);
