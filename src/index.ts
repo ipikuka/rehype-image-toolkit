@@ -1,6 +1,7 @@
 import type { Plugin } from "unified";
 import type { Element, Root, RootContent, Text } from "hast";
 import { CONTINUE, visit, type VisitorResult } from "unist-util-visit";
+import { visitParents } from "unist-util-visit-parents";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
@@ -14,7 +15,7 @@ declare module "hast" {
     src?: string;
     title?: string;
     alt?: string;
-    markedAsToBeAutoLinked?: boolean;
+    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
     markedAsToBeInFigure?: boolean;
     captionInFigure?: string;
     markedAsToBeConverted?: boolean;
@@ -165,7 +166,18 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // mark if it is image and the parent is not anchor element
         if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
-          node.properties.markedAsToBeAutoLinked = true;
+          node.properties.markedAsToBeAutoLinked = "bracket";
+        }
+      }
+
+      const hasCurlyBrace3 = src && /%28.*%29/.test(src);
+      const hasCurlyBrace1 = src && /\(.*\)/.test(src);
+      if (hasCurlyBrace1 || hasCurlyBrace3) {
+        node.properties.src = hasCurlyBrace1 ? src.slice(1, -1) : src.slice(3, -3);
+
+        // mark if it is image and the parent is not anchor element
+        if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
+          node.properties.markedAsToBeAutoLinked = "parenthesis";
         }
       }
 
@@ -462,8 +474,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
 
       if (node.properties.markedAsToBeAutoLinked) {
-        node.properties.markedAsToBeAutoLinked = undefined;
         const src = node.properties.src;
+        const marker = node.properties.markedAsToBeAutoLinked;
+        node.properties.markedAsToBeAutoLinked = undefined;
 
         const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
         const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
@@ -478,16 +491,46 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           fileLinkRegex.test(src!);
 
         // Check if the source refers to an image (by file extension)
-        const imageFileRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
-        const isImage = imageFileRegex.test(src!);
+        const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
+        const isImageFileExtension = imageFileExtensionRegex.test(src!);
 
-        if (isValidLink && isImage) {
-          parent.children[index] = {
-            type: "element",
-            tagName: "a",
-            properties: { href: src, target: "_blank" },
-            children: [node],
-          };
+        if (isValidLink && isImageFileExtension) {
+          if (
+            parent.type === "element" &&
+            parent.tagName === "figure" &&
+            marker === "bracket"
+          ) {
+            // needs to find parent index, so anchor can cover the parent
+            visitParents(tree, "element", function (targetNode, ancestors) {
+              if (targetNode !== parent) return;
+
+              const grandparent = ancestors.at(-1);
+              if (
+                !grandparent ||
+                !("children" in grandparent) ||
+                !Array.isArray(grandparent.children)
+              ) {
+                return;
+              }
+
+              const parentIndex = grandparent.children.indexOf(parent);
+              if (parentIndex !== -1) {
+                grandparent.children.splice(parentIndex, 1, {
+                  type: "element",
+                  tagName: "a",
+                  properties: { href: src, target: "_blank" },
+                  children: [parent],
+                });
+              }
+            });
+          } else {
+            parent.children.splice(index, 1, {
+              type: "element",
+              tagName: "a",
+              properties: { href: src, target: "_blank" },
+              children: [node],
+            });
+          }
         }
       }
     });
