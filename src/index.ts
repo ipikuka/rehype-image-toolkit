@@ -198,6 +198,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
     /**
      * unravels image elements to be converted into video/audio or to be wrapped with figure in paragraphs
+     * unravels also video and audio elements parsed in paragraphs (it may happen while rehype parsing)
      *
      * mutates children !
      */
@@ -234,6 +235,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       for (const element of node.children) {
         const isImage = element.type === "element" && element.tagName === "img";
+        const isVideo = element.type === "element" && element.tagName === "video";
+        const isAudio = element.type === "element" && element.tagName === "audio";
         const isAnchorWithImage =
           element.type === "element" &&
           element.tagName === "a" &&
@@ -244,6 +247,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const subElement = isAnchorWithImage ? (element.children[0] as Element) : null;
 
         if (
+          isVideo ||
+          isAudio ||
           (isImage &&
             "properties" in element &&
             (element.properties.markedAsToBeInFigure ||
