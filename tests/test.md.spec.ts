@@ -278,16 +278,50 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO, video or audio may also be in a paragraph, unravel also video/audio elements
+  // ******************************************
+  it("handle basic html <img>, <video>, and <audio>", async () => {
+    const input = dedent`
+      <img alt="Image Alt" src="image.png">
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>
+    `;
+
+    const html = String(await processMdRawFirst(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<img alt="Image Alt" src="image.png" />
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>
+      "
+    `);
+  });
+
+  // ******************************************
+  it("handle basic html <img>, <video>, and <audio>, extract audio/video wrapped with p due to blank lines", async () => {
+    const input = dedent`
+      <img alt="Image Alt" src="image.png">
+
+      <video src="video.mp4"></video>
+
+      <audio src="audio.mp3"></audio>
+    `;
+
+    const html = String(await processMdRawFirst(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<img alt="Image Alt" src="image.png" />
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>
+      "
+    `);
+  });
+
   // ******************************************
   it("handle caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img alt="*Image Caption" src="image.png">
-
       <video alt="*Video Caption" src="video.mp4"></video>
-
       <audio alt="*Audio Caption" src="audio.mp3"></audio>
-
       <p>hello</p>
     `;
 
@@ -298,52 +332,41 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <img alt="Image Caption" src="image.png" />
         <figcaption>Image Caption</figcaption>
       </figure>
-      <p>
-        <figure>
-          <video src="video.mp4"></video>
-          <figcaption>Video Caption</figcaption>
-        </figure>
-      </p>
-      <p>
-        <figure>
-          <audio src="audio.mp3"></audio>
-          <figcaption>Audio Caption</figcaption>
-        </figure>
-      </p>
+      <figure>
+        <video src="video.mp4"></video>
+        <figcaption>Video Caption</figcaption>
+      </figure>
+      <figure>
+        <audio src="audio.mp3"></audio>
+        <figcaption>Audio Caption</figcaption>
+      </figure>
       <p>hello</p>
       "
     `);
   });
 
-  // delete
   // ******************************************
-  it("handle caption, in html <video>", async () => {
+  it("handle caption, in html <img>, <video>, and <audio>, extract audio/video from p due to blank lines", async () => {
     const input = dedent`
-      <video alt="*Video Caption" src="video.mp4">
+      <img alt="*Image Caption" src="image.png">
+
+      <video alt="*Video Caption" src="video.mp4"></video>
+
+      <audio alt="*Audio Caption" src="audio.mp3"></audio>
     `;
 
     const html = String(await processMdRawFirst(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<figure>
+        <img alt="Image Caption" src="image.png" />
+        <figcaption>Image Caption</figcaption>
+      </figure>
+      <figure>
         <video src="video.mp4"></video>
         <figcaption>Video Caption</figcaption>
       </figure>
-      "
-    `);
-  });
-
-  // delete
-  // ******************************************
-  it("handle caption, in html <audio>", async () => {
-    const input = dedent`
-      <audio alt="*Audio Caption" src="audio.mp3">
-    `;
-
-    const html = String(await processMdRawFirst(input));
-
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<figure>
+      <figure>
         <audio src="audio.mp3"></audio>
         <figcaption>Audio Caption</figcaption>
       </figure>
@@ -351,56 +374,22 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO
   // ******************************************
   it("handle figure with no caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img alt="+" src="image.png">
 
-      <video alt="+" src="video.mp4">
+      <video alt="+" src="video.mp4"></video>
 
-      <audio alt="+" src="audio.mp3">
+      <audio alt="+" src="audio.mp3"></audio>
     `;
 
     const html = String(await processMdRawFirst(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<figure><img alt="" src="image.png" /></figure>
-      <figure>
-        <video src="video.mp4">
-          <figure><audio src="audio.mp3"></audio></figure>
-        </video>
-      </figure>
-      "
-    `);
-  });
-
-  // delete
-  // ******************************************
-  it("handle figure with no caption, in html <video>", async () => {
-    const input = dedent`
-      <video alt="+" src="video.mp4">
-    `;
-
-    const html = String(await processMdRawFirst(input));
-
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<figure><video src="video.mp4"></video></figure>
-      "
-    `);
-  });
-
-  // delete
-  // ******************************************
-  it("handle figure with no caption, in html <audio>", async () => {
-    const input = dedent`
-      <audio alt="+" src="audio.mp3">
-    `;
-
-    const html = String(await processMdRawFirst(input));
-
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<figure><audio src="audio.mp3"></audio></figure>
+      <figure><video src="video.mp4"></video></figure>
+      <figure><audio src="audio.mp3"></audio></figure>
       "
     `);
   });
@@ -444,7 +433,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO
   // ******************************************
   it("handle images / videos / audio in blockquotes", async () => {
     const input = dedent`
@@ -464,20 +452,16 @@ describe("reyhpe-image-hack, with markdown sources", () => {
           <img alt="Image Caption" src="image.png" />
           <figcaption>Image Caption</figcaption>
         </figure>
-        <p>
-          Here is the video.
-          <figure>
-            <video src="video.mp4"></video>
-            <figcaption>Video Caption</figcaption>
-          </figure>
-        </p>
-        <p>
-          Here is the audio.
-          <figure>
-            <audio src="audio.mp3"></audio>
-            <figcaption>Audio Caption</figcaption>
-          </figure>
-        </p>
+        <p>Here is the video.</p>
+        <figure>
+          <video src="video.mp4"></video>
+          <figcaption>Video Caption</figcaption>
+        </figure>
+        <p>Here is the audio.</p>
+        <figure>
+          <audio src="audio.mp3"></audio>
+          <figcaption>Audio Caption</figcaption>
+        </figure>
       </blockquote>
       "
     `);
@@ -766,7 +750,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO
+  // TODO, extreact the last two because the anchor consists figure/video/audio
   // ******************************************
   it("do NOT auto link for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
