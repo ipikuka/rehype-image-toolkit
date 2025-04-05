@@ -170,12 +170,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      const hasCurlyBrace3 = src && /%28.*%29/.test(src);
-      const hasCurlyBrace1 = src && /\(.*\)/.test(src);
-      if (hasCurlyBrace1 || hasCurlyBrace3) {
-        node.properties.src = hasCurlyBrace1 ? src.slice(1, -1) : src.slice(3, -3);
+      const hasParenthesis3 = src && /%28.*%29/.test(src);
+      const hasParenthesis1 = src && /\(.*\)/.test(src);
+      if (hasParenthesis1 || hasParenthesis3) {
+        /* v8 ignore next */ // ignore because mdx parsing doesn't encode parentheses, just in case
+        node.properties.src = hasParenthesis1 ? src.slice(1, -1) : src.slice(3, -3);
 
-        // mark if it is image and the parent is not anchor element
+        // mark if it is an image and the parent is not an anchor element
         if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
           node.properties.markedAsToBeAutoLinked = "parenthesis";
         }
@@ -509,6 +510,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 !grandparent ||
                 !("children" in grandparent) ||
                 !Array.isArray(grandparent.children)
+                /* v8 ignore next 3 */
               ) {
                 return;
               }
