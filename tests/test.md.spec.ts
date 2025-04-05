@@ -621,7 +621,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle auto link for images, using brackets", async () => {
+  it("handle autolink for images, using brackets", async () => {
     const input = dedent`
       ![]([image.png]) 
       
@@ -650,7 +650,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle auto link for images, using curly braces", async () => {
+  it("handle autolink for images, using parentheses", async () => {
     const input = dedent`
       ![]((image.png)) 
       
@@ -677,7 +677,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add auto link which is already wrapped with a link", async () => {
+  it("do NOT add autolink which is already wrapped with a link", async () => {
     const input = dedent`
       [![alt]([image.png])](https://example.com)
     `;
@@ -693,7 +693,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add auto link which is already wrapped with a link", async () => {
+  it("do NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
       Hi [![+alt]([image.png])](https://example.com) text
 
@@ -721,7 +721,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add auto link, but add caption; which is already wrapped with a link", async () => {
+  it("do NOT add autolink, but add caption; which is already wrapped with a link", async () => {
     const input = dedent`
       [![+alt]([image.png])](https://example.com)
 
@@ -753,7 +753,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT auto link for videos / audio, just remove brackets from the source", async () => {
+  it("do NOT autolink for videos / audio, just remove brackets from the source", async () => {
     const input = dedent`
       ![]([video.mp4])
 
@@ -779,9 +779,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO, extreact the last two because the anchor consists figure/video/audio
   // ******************************************
-  it("do NOT auto link for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
+  it("do NOT autolink for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
       [![+]([video.mp4])](www.example.com)
 
@@ -803,29 +802,25 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         ><figure>
           <audio><source src="audio.mp3" type="audio/mpeg" /></audio></figure
       ></a>
-      <p>
-        <a href="www.example.com"
-          ><figure><img src="image.png" alt="" /></figure>
-          <figure>
-            <video><source src="video.mp4" type="video/mp4" /></video>
-          </figure>
-          <figure>
-            <audio><source src="video.mp3" type="audio/mpeg" /></audio></figure
-        ></a>
-      </p>
-      <p>
-        <a href="www.example.com"
-          ><img src="image.png" alt="" />
+      <a href="www.example.com"
+        ><figure><img src="image.png" alt="" /></figure>
+        <figure>
           <video><source src="video.mp4" type="video/mp4" /></video>
-          <audio><source src="video.mp3" type="audio/mpeg" /></audio
-        ></a>
-      </p>
+        </figure>
+        <figure>
+          <audio><source src="video.mp3" type="audio/mpeg" /></audio></figure
+      ></a>
+      <a href="www.example.com"
+        ><img src="image.png" alt="" />
+        <video><source src="video.mp4" type="video/mp4" /></video>
+        <audio><source src="video.mp3" type="audio/mpeg" /></audio
+      ></a>
       "
     `);
   });
 
   // ******************************************
-  it("do NOT add auto link for relative links", async () => {
+  it("do NOT add autolink for relative links", async () => {
     const input = dedent`
     ![]([../image.jpeg])
 
@@ -847,7 +842,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("example in the README", async () => {
     const input = dedent`
-    It converts images to audio/videos. ![](video.mp4) 
+    It converts images to audio/videos. ![](video.mp4)
 
     It adds autolink. ![alt]([https://example.com/image.png])
 
