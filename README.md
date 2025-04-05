@@ -12,7 +12,7 @@ This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **en
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
-Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for auto link to originals, wrapping media with `figure` and adding caption.
+Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption.
 
 ## When should I use this?
 
@@ -24,7 +24,7 @@ That's why, while developing **`rehype-image-hack`**, I ensured that each featur
 + **Adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
 + **Adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
 + **Adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
-+ **Adding auto link to the original image** - Control which images should be automatically linked to their original source.
++ **Adding autolink to the original image** - Control which images should be automatically linked to their original source.
 
 ## Installation
 
@@ -47,7 +47,7 @@ Say we have the following markdown file, `example.md`:
 ```markdown
 It converts images to audio/videos. ![](video.mp4) 
 
-It adds auto link. ![alt]([https://example.com/image.png])
+It adds autolink. ![alt]([https://example.com/image.png])
 
 It adds caption. ![*Image Caption](image.png)
 
@@ -86,7 +86,7 @@ Now, running `node example.js` you will see.
   <source src="video.mp4" type="video/mp4" />
 </video>
 <p>
-  It adds auto link.
+  It adds autolink.
   <a href="https://example.com/image.png" target="_blank">
     <img src="https://example.com/image.png" alt="alt"/>
   </a>
@@ -109,7 +109,7 @@ Without `rehype-image-hack` the output would be:
   It converts images to audio/videos. <img src="video.mp4" alt="" />
 </p>
 <p>
-  It adds auto link. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
+  It adds autolink. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
 </p>
 <p>
   It adds caption. <img src="image.png" alt="*Image Caption" />
@@ -253,15 +253,18 @@ However, you may not need to specify attributes for images, videos and audio, as
 
 The width and height attributes on images are treated specially. When used without a unit, the unit is assumed to be pixels. However, any of the CSS unit identifiers can be used. There shouldn't be any space between the number and the unit. 
 
-### Create an auto link for images
+### Create an autolink for images ((Explicit Autolink))
 
-**Wrap the link of the source in brackets.** It is valid for only if the image source starts with protokol-like links like **`http://`**, web sites start with **`www.`**, root relative links start with a slash **`/`** and if just an image name like **`image.png`**.
+**Wrap the link of the source in brackets or parentheses.** It is valid for only if the image source starts with protokol-like links like **`http://`**, web sites start with **`www.`**, root relative links start with a slash **`/`** and if just an image name like **`image.png`**.
 
 ```markdown
-// pay attention to brackets around the link
+### pay attention to additional brackets around the link
 ![alt]([http://example.com/image.png] "title")
+
+### pay attention to additional parentheses around the link
+![alt]((http://example.com/image.png) "title")
 ```
-will produce the output below:
+will produce the same output below:
 ```html
 <p>
   <a href="http://example.com/image.png">
@@ -270,7 +273,31 @@ will produce the output below:
 </p>
 ```
 
-### Add caption for images/videos/audio (Explicit Figures)
+Wrapping the source attribute with brackets or parentheses produces mostly the same behavior/output, but only differs in case the image is wrapped in a `<figure>` element.
++ Wrapping the source attribute **with brackets** provides autolinking for whole `<figure>` element including caption.
++ Wrapping the source attribute **with parentheses** provides autolinking for only the `<img>` element in the `<figure>`.
+
+```markdown
+![*caption]([image.png])
+![*caption]((image.png))
+```
+will produce:
+```html
+<a href="image.png" target="_blank">
+  <figure>
+    <img src="image.png" alt="caption">
+    <figcaption>caption</figcaption>
+  </figure>
+</a>
+<figure>
+  <a href="image.png" target="_blank">
+    <img src="image.png" alt="caption">
+  </a>
+  <figcaption>caption</figcaption>
+</figure>
+```
+
+### Add caption for images/videos/audio (Explicit Figure)
 
 Add a star **`*`** or **`caption:`** directives to the alt attribute in the beginning in order to wrap the media asset with `<figure>` element.
 
