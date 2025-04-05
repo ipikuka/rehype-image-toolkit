@@ -1,5 +1,5 @@
 import type { Plugin } from "unified";
-import type { Element, Root, RootContent, Text } from "hast";
+import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 
@@ -159,7 +159,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
      * mark the images/videos/audio as to be wrapped in a figure and set the captions
      * mark the images as to be converted into videos/audio based on the source extension
      *
-     * doesn't mutate the children
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
@@ -169,8 +168,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding autolink ***************************************
 
       const isAnchorParent = parent.type === "element" && parent.tagName === "a";
-      let src = node.properties.src;
 
+      let src = node.properties.src;
       if (src) {
         const wrappers = [
           { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
@@ -203,21 +202,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding figure and caption *****************************
 
       const alt = node.properties.alt;
-      const startsWithPlus = alt?.startsWith("+");
-      const startsWithStar = alt?.startsWith("*");
-      const startsWithCaption = alt?.startsWith("caption:");
-      const needsCaption = startsWithCaption || startsWithStar || startsWithPlus;
+      if (alt) {
+        const startsWith = {
+          plus: alt.startsWith("+"),
+          star: alt.startsWith("*"),
+          caption: alt.startsWith("caption:"),
+        };
 
-      if (alt && needsCaption) {
-        node.properties.markedAsToBeInFigure = true;
+        if (startsWith.plus || startsWith.star || startsWith.caption) {
+          {
+            node.properties.markedAsToBeInFigure = true;
 
-        const figcaptionText = startsWithStar || startsWithPlus ? alt.slice(1) : alt.slice(8);
-        if (!startsWithPlus) node.properties.captionInFigure = figcaptionText;
+            const figcaptionText =
+              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
-        if (node.tagName === "img") {
-          node.properties.alt = figcaptionText;
-        } else {
-          node.properties.alt = undefined;
+            node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+            node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
+          }
         }
       }
 
@@ -235,68 +236,24 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
      * unravel image elements to be converted into video/audio or to be wrapped with figure in paragraphs
      * unravel also video and audio elements parsed in a paragraph (it may happen while remark/rehype parsing)
      *
-     * mutates children !
+     * Mutates `children` of paragraph nodes.
      */
     visit(tree, "element", function (node, index, parent) {
-      if (!parent || index === undefined || node.tagName !== "p") {
-        return;
-      }
+      if (!parent || index === undefined || node.tagName !== "p") return;
 
       const newNodes: RootContent[] = [];
       let hasNonWhitespace = false;
-      let currentParagraph: Element = {
-        type: "element",
-        tagName: "p",
-        properties: {},
-        children: [],
-      };
+      let currentParagraph: Element = createEmptyParagraph();
 
-      let happened = false;
+      let inSplitMode = false;
       let referenceToLastTextElement: Text | undefined;
 
-      function pushCurrentParagraph() {
-        if (hasNonWhitespace) {
-          newNodes.push(currentParagraph);
-        }
-
-        hasNonWhitespace = false;
-        currentParagraph = {
-          type: "element",
-          tagName: "p",
-          properties: {},
-          children: [],
-        };
-      }
-
       for (const element of node.children) {
-        const isImage = element.type === "element" && element.tagName === "img";
-        const isVideo = element.type === "element" && element.tagName === "video";
-        const isAudio = element.type === "element" && element.tagName === "audio";
-        const isAnchorWithImage =
-          element.type === "element" &&
-          element.tagName === "a" &&
-          element.children.length === 1 &&
-          element.children[0].type === "element" &&
-          element.children[0].tagName === "img";
-
-        const subElement = isAnchorWithImage ? (element.children[0] as Element) : null;
-
-        if (
-          isVideo ||
-          isAudio ||
-          (isImage &&
-            "properties" in element &&
-            (element.properties.markedAsToBeInFigure ||
-              element.properties.markedAsToBeConverted)) ||
-          (subElement &&
-            "properties" in subElement &&
-            (subElement.properties.markedAsToBeInFigure ||
-              subElement.properties.markedAsToBeConverted))
-        ) {
-          happened = true;
+        if (isRelevant(element)) {
+          inSplitMode = true;
           const prevHasNonWhitespace = hasNonWhitespace;
 
-          pushCurrentParagraph(); // it may toggle the hasNonWhitespace
+          flushParagraph(); // it may toggle the hasNonWhitespace
 
           if (prevHasNonWhitespace) {
             newNodes.push({ type: "text", value: "\n" }, element);
@@ -304,10 +261,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             newNodes.push(element);
           }
 
-          pushCurrentParagraph();
+          flushParagraph();
         } else {
-          if (happened && element.type === "text") {
-            happened = false;
+          if (element.type === "text" && inSplitMode) {
+            inSplitMode = false;
             const leadingWhitespace = getLeadingWhitespace(element.value);
             element.value.replace(RE_LEADING_WHITESPACE, "");
 
@@ -318,19 +275,61 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               );
             }
           }
-          if (!(element.type === "text" && element.value === "")) {
+
+          if (element.type !== "text" || element.value !== "") {
             currentParagraph.children.push(element);
             if (element.type === "text") referenceToLastTextElement = element;
           }
 
-          if (!(element.type === "text" && !element.value.trim())) {
+          if (element.type !== "text" || element.value.trim() !== "") {
             hasNonWhitespace = true;
           }
         }
       }
 
-      pushCurrentParagraph();
+      flushParagraph();
       parent.children.splice(index, 1, ...newNodes);
+
+      function createEmptyParagraph(): Element {
+        return {
+          type: "element",
+          tagName: "p",
+          properties: {},
+          children: [],
+        };
+      }
+
+      function flushParagraph() {
+        if (hasNonWhitespace) {
+          newNodes.push(currentParagraph);
+        }
+        hasNonWhitespace = false;
+        currentParagraph = createEmptyParagraph();
+      }
+
+      function isRelevant(element: ElementContent) {
+        if (element.type !== "element") return false;
+        const isVideo = element.tagName === "video";
+        const isAudio = element.tagName === "audio";
+
+        const isImage = element.tagName === "img";
+        const isAnchorWithImage =
+          element.tagName === "a" &&
+          element.children.length === 1 &&
+          element.children[0].type === "element" &&
+          element.children[0].tagName === "img";
+
+        const isRelevantImage = isImage && isMarked(element);
+        const isRelevantAnchor = isAnchorWithImage && isMarked(element.children[0]);
+
+        return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
+      }
+
+      function isMarked(el: ElementContent | undefined | null) {
+        /* v8 ignore next */
+        if (!el || !("properties" in el)) return false;
+        return el.properties.markedAsToBeInFigure || el.properties.markedAsToBeConverted;
+      }
     });
 
     /**
@@ -339,7 +338,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
      * add additional properties into assets utilizing the title attribute
      * add autolink for marked images
      *
-     * mutates children !
+     * Mutates `children` of paragraph nodes.
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
