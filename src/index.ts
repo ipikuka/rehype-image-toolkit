@@ -136,6 +136,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     return match ? match[1] : "";
   }
 
+  const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
+  const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
+  const wwwRegex = /^www\./i; // www links
+  const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
+  const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
+
   /**
    * Transform.
    */
@@ -143,7 +149,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     // console.dir(tree, { depth: 8 });
 
     /**
-     * visit for preperation
+     * visit for preparation
      *
      * removes the brackets around the videos/audio sources since they will not be auto linked
      * marks the images as to be auto linked if there are brackets around the source
@@ -157,30 +163,41 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      const src = node.properties.src;
+      // Prepare part for autolink ***************************************
 
-      const hasBracket3 = src && /%5B.*%5D/.test(src);
-      const hasBracket1 = src && /\[.*\]/.test(src);
-      if (hasBracket1 || hasBracket3) {
-        node.properties.src = hasBracket1 ? src.slice(1, -1) : src.slice(3, -3);
+      const isAnchorParent = parent.type === "element" && parent.tagName === "a";
+      let src = node.properties.src;
 
-        // mark if it is image and the parent is not anchor element
-        if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
-          node.properties.markedAsToBeAutoLinked = "bracket";
+      if (src) {
+        const wrappers = [
+          { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
+          { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
+        ];
+
+        for (const { wrapper, raw, encoded } of wrappers) {
+          const isRaw = raw.test(src);
+          const isEncoded = !isRaw && encoded.test(src);
+
+          if (isRaw || isEncoded) {
+            const sliceAmount = isRaw ? 1 : 3;
+            src = src.slice(sliceAmount, -sliceAmount);
+            node.properties.src = src;
+
+            const isValidAutolink =
+              (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+              rootRelativeRegex.test(src) ||
+              wwwRegex.test(src) ||
+              fileLinkRegex.test(src);
+
+            if (node.tagName === "img" && !isAnchorParent && isValidAutolink) {
+              node.properties.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
+              break; // stop after the first match
+            }
+          }
         }
       }
 
-      const hasParenthesis3 = src && /%28.*%29/.test(src);
-      const hasParenthesis1 = src && /\(.*\)/.test(src);
-      if (hasParenthesis1 || hasParenthesis3) {
-        /* v8 ignore next */ // ignore because mdx parsing doesn't encode parentheses, just in case
-        node.properties.src = hasParenthesis1 ? src.slice(1, -1) : src.slice(3, -3);
-
-        // mark if it is an image and the parent is not an anchor element
-        if (node.tagName === "img" && !(parent.type === "element" && parent.tagName === "a")) {
-          node.properties.markedAsToBeAutoLinked = "parenthesis";
-        }
-      }
+      // Prepare part for figure and caption *****************************
 
       const alt = node.properties.alt;
       const startsWithPlus = alt?.startsWith("+");
@@ -200,6 +217,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           node.properties.alt = undefined;
         }
       }
+
+      // Prepare part for convertion to video/audio **********************
 
       const extension = getExtension(node.properties.src);
       const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
@@ -321,36 +340,36 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      if (node.properties.markedAsToBeInFigure) {
-        const caption = node.properties.captionInFigure;
+      if (!node.properties.markedAsToBeInFigure) return CONTINUE;
 
-        const figcaptionElement =
-          caption === undefined
-            ? undefined
-            : ({
-                type: "element",
-                tagName: "figcaption",
-                properties: {},
-                children: [{ type: "text", value: caption }],
-              } as Element);
+      const caption = node.properties.captionInFigure;
 
-        const figureElement: Element = {
-          type: "element",
-          tagName: "figure",
-          properties: {},
-          children: figcaptionElement
-            ? settings.figureCaptionPosition === "above"
-              ? [figcaptionElement, node]
-              : [node, figcaptionElement]
-            : [node],
-        };
+      const figcaptionElement =
+        caption === undefined
+          ? undefined
+          : ({
+              type: "element",
+              tagName: "figcaption",
+              properties: {},
+              children: [{ type: "text", value: caption }],
+            } as Element);
 
-        node.properties.markedAsToBeInFigure = undefined;
-        node.properties.captionInFigure = undefined;
+      const figureElement: Element = {
+        type: "element",
+        tagName: "figure",
+        properties: {},
+        children: figcaptionElement
+          ? settings.figureCaptionPosition === "above"
+            ? [figcaptionElement, node]
+            : [node, figcaptionElement]
+          : [node],
+      };
 
-        // replace the image with figure element
-        parent.children.splice(index, 1, figureElement);
-      }
+      node.properties.markedAsToBeInFigure = undefined;
+      node.properties.captionInFigure = undefined;
+
+      // replace the image with figure element
+      parent.children.splice(index, 1, figureElement);
     });
 
     /**
@@ -363,8 +382,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      const marked = node.properties.markedAsToBeConverted;
-      if (!marked) return CONTINUE;
+      if (!node.properties.markedAsToBeConverted) return CONTINUE;
 
       const [newTagName, extension] = node.properties.convertionString!.split("/");
       node.properties.markedAsToBeConverted = undefined;
@@ -409,7 +427,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
      * adds additional properties into assets utilizing the title attribute
      * adds auto link for images not videos and audio
      *
-     * doesn't mutate the children
+     * mutates children !
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
@@ -479,60 +497,40 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const marker = node.properties.markedAsToBeAutoLinked;
         node.properties.markedAsToBeAutoLinked = undefined;
 
-        const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
-        const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
-        const wwwRegex = /^www\./i; // www links
-        const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
+        const isFigureParent = parent.type === "element" && parent.tagName === "figure";
 
-        // Check if the src matches any of the types
-        const isValidLink =
-          httpsRegex.test(src!) ||
-          rootRelativeRegex.test(src!) ||
-          wwwRegex.test(src!) ||
-          fileLinkRegex.test(src!);
+        if (isFigureParent && marker === "bracket") {
+          // find the parent index so as the anchor covers the parent
+          visitParents(tree, "element", function (targetNode, ancestors) {
+            if (targetNode !== parent) return;
 
-        // Check if the source refers to an image (by file extension)
-        const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
-        const isImageFileExtension = imageFileExtensionRegex.test(src!);
+            const grandparent = ancestors.at(-1);
+            if (
+              !grandparent ||
+              !("children" in grandparent) ||
+              !Array.isArray(grandparent.children)
+              /* v8 ignore next 3 */
+            ) {
+              return;
+            }
 
-        if (isValidLink && isImageFileExtension) {
-          if (
-            parent.type === "element" &&
-            parent.tagName === "figure" &&
-            marker === "bracket"
-          ) {
-            // needs to find parent index, so anchor can cover the parent
-            visitParents(tree, "element", function (targetNode, ancestors) {
-              if (targetNode !== parent) return;
-
-              const grandparent = ancestors.at(-1);
-              if (
-                !grandparent ||
-                !("children" in grandparent) ||
-                !Array.isArray(grandparent.children)
-                /* v8 ignore next 3 */
-              ) {
-                return;
-              }
-
-              const parentIndex = grandparent.children.indexOf(parent);
-              if (parentIndex !== -1) {
-                grandparent.children.splice(parentIndex, 1, {
-                  type: "element",
-                  tagName: "a",
-                  properties: { href: src, target: "_blank" },
-                  children: [parent],
-                });
-              }
-            });
-          } else {
-            parent.children.splice(index, 1, {
-              type: "element",
-              tagName: "a",
-              properties: { href: src, target: "_blank" },
-              children: [node],
-            });
-          }
+            const parentIndex = grandparent.children.indexOf(parent);
+            if (parentIndex !== -1) {
+              grandparent.children.splice(parentIndex, 1, {
+                type: "element",
+                tagName: "a",
+                properties: { href: src, target: "_blank" },
+                children: [parent],
+              });
+            }
+          });
+        } else {
+          parent.children.splice(index, 1, {
+            type: "element",
+            tagName: "a",
+            properties: { href: src, target: "_blank" },
+            children: [node],
+          });
         }
       }
     });
