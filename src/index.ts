@@ -309,18 +309,22 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       function isRelevant(element: ElementContent) {
         if (element.type !== "element") return false;
+
         const isVideo = element.tagName === "video";
         const isAudio = element.tagName === "audio";
 
-        const isImage = element.tagName === "img";
-        const isAnchorWithImage =
-          element.tagName === "a" &&
-          element.children.length === 1 &&
-          element.children[0].type === "element" &&
-          element.children[0].tagName === "img";
+        const isRelevantImage = element.tagName === "img" && isMarked(element);
 
-        const isRelevantImage = isImage && isMarked(element);
-        const isRelevantAnchor = isAnchorWithImage && isMarked(element.children[0]);
+        const isRelevantAnchor =
+          element.tagName === "a" &&
+          element.children.some((child) => {
+            return (
+              child.type === "element" &&
+              ((child.tagName === "img" && isMarked(child)) ||
+                child.tagName === "video" ||
+                child.tagName === "audio")
+            );
+          });
 
         return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
       }
