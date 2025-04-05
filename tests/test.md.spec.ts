@@ -620,15 +620,43 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO link should cover the figure or find a way link should cover image in the figure or figure and caption
   // ******************************************
-  it("handle auto link for images", async () => {
+  it("handle auto link for images, using brackets", async () => {
     const input = dedent`
       ![]([image.png]) 
       
       ![+alt]([image.png])
 
       ![*caption]([image.png])
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p>
+        <a href="image.png" target="_blank"><img src="image.png" alt="" /></a>
+      </p>
+      <a href="image.png" target="_blank"
+        ><figure><img src="image.png" alt="alt" /></figure
+      ></a>
+      <a href="image.png" target="_blank"
+        ><figure>
+          <img src="image.png" alt="caption" />
+          <figcaption>caption</figcaption>
+        </figure></a
+      >
+      "
+    `);
+  });
+
+  // ******************************************
+  it("handle auto link for images, using curly braces", async () => {
+    const input = dedent`
+      ![]((image.png)) 
+      
+      ![+alt]((image.png))
+
+      ![*caption]((image.png))
     `;
 
     const html = String(await processMd(input));
