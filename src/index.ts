@@ -1,6 +1,6 @@
 import type { Plugin } from "unified";
 import type { Element, Root, RootContent, Text } from "hast";
-import { CONTINUE, visit, type VisitorResult } from "unist-util-visit";
+import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -116,9 +116,12 @@ const getExtension = (src: string | undefined): string | undefined => {
 
 /**
  *
- * enhance markdown image syntax and MDX media elements (img, audio, video) by adding attributes,
- * figure captions, auto-linking to originals, supporting extended syntax for rich media and
- * converting images to video/audio based on the file extension.
+ * `rehype-image-hack` enhances markdown image syntax and MDX media elements (img, audio, video) by;
+ *  - adding attributes,
+ *  - adding figure captions,
+ *  - auto-linking images to originals,
+ *  - converting images to video/audio based on the file extension
+ *
  */
 const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   const settings = Object.assign(
@@ -151,19 +154,19 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     /**
      * visit for preparation
      *
-     * removes the brackets around the videos/audio sources since they will not be auto linked
-     * marks the images as to be auto linked if there are brackets around the source
-     * marks the images/videos/audio as to be wrapped in a figure and set/remove the captions
-     * marks the images as to be converted into videos/audio based on the source extension
+     * remove the brackets/parentheses around the videos/audio sources since they will not be auto linked
+     * mark the images as to be autolinked if there are brackets/parentheses around the source
+     * mark the images/videos/audio as to be wrapped in a figure and set the captions
+     * mark the images as to be converted into videos/audio based on the source extension
      *
-     * doesn't mutates the children
+     * doesn't mutate the children
      */
     visit(tree, "element", function (node, index, parent): VisitorResult {
       if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
         return;
       }
 
-      // Prepare part for autolink ***************************************
+      // Preparation part for adding autolink ***************************************
 
       const isAnchorParent = parent.type === "element" && parent.tagName === "a";
       let src = node.properties.src;
@@ -197,7 +200,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      // Prepare part for figure and caption *****************************
+      // Preparation part for adding figure and caption *****************************
 
       const alt = node.properties.alt;
       const startsWithPlus = alt?.startsWith("+");
@@ -218,7 +221,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      // Prepare part for convertion to video/audio **********************
+      // Preparation part for convertion to video/audio ****************************
 
       const extension = getExtension(node.properties.src);
       const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
@@ -229,8 +232,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * unravels image elements to be converted into video/audio or to be wrapped with figure in paragraphs
-     * unravels also video and audio elements parsed in paragraphs (it may happen while rehype parsing)
+     * unravel image elements to be converted into video/audio or to be wrapped with figure in paragraphs
+     * unravel also video and audio elements parsed in a paragraph (it may happen while remark/rehype parsing)
      *
      * mutates children !
      */
@@ -331,7 +334,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * wraps marked images/videos/audio with <figure> element and add caption
+     * wrap marked images/videos/audio with <figure> element and add caption
+     * convert marked images into to <video> / <audio> elements
+     * add additional properties into assets utilizing the title attribute
+     * add autolink for marked images
      *
      * mutates children !
      */
@@ -340,103 +346,85 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      if (!node.properties.markedAsToBeInFigure) return CONTINUE;
+      // The part for adding figure and caption ****************************
 
-      const caption = node.properties.captionInFigure;
+      if (node.properties.markedAsToBeInFigure) {
+        const caption = node.properties.captionInFigure;
 
-      const figcaptionElement =
-        caption === undefined
-          ? undefined
-          : ({
+        const figcaptionElement =
+          caption === undefined
+            ? undefined
+            : ({
+                type: "element",
+                tagName: "figcaption",
+                properties: {},
+                children: [{ type: "text", value: caption }],
+              } as Element);
+
+        const figureElement: Element = {
+          type: "element",
+          tagName: "figure",
+          properties: {},
+          children: figcaptionElement
+            ? settings.figureCaptionPosition === "above"
+              ? [figcaptionElement, node]
+              : [node, figcaptionElement]
+            : [node],
+        };
+
+        node.properties.markedAsToBeInFigure = undefined;
+        node.properties.captionInFigure = undefined;
+
+        parent.children.splice(index, 1, figureElement);
+        return index;
+      }
+
+      // The part for convertion to video/audio ****************************
+
+      if (node.properties.markedAsToBeConverted) {
+        const [newTagName, extension] = node.properties.convertionString!.split("/");
+        node.properties.markedAsToBeConverted = undefined;
+        node.properties.convertionString = undefined;
+
+        const src = node.properties.src;
+        node.properties.src = undefined;
+        node.properties.alt = undefined;
+
+        const properties = structuredClone(node.properties);
+
+        if (settings.alwaysAddControlsForVideos && newTagName === "video") {
+          properties["controls"] = true;
+        }
+
+        if (settings.alwaysAddControlsForAudio && newTagName === "audio") {
+          properties["controls"] = true;
+        }
+
+        const newNode: Element = {
+          type: "element",
+          tagName: newTagName,
+          properties,
+          children: [
+            {
               type: "element",
-              tagName: "figcaption",
-              properties: {},
-              children: [{ type: "text", value: caption }],
-            } as Element);
-
-      const figureElement: Element = {
-        type: "element",
-        tagName: "figure",
-        properties: {},
-        children: figcaptionElement
-          ? settings.figureCaptionPosition === "above"
-            ? [figcaptionElement, node]
-            : [node, figcaptionElement]
-          : [node],
-      };
-
-      node.properties.markedAsToBeInFigure = undefined;
-      node.properties.captionInFigure = undefined;
-
-      // replace the image with figure element
-      parent.children.splice(index, 1, figureElement);
-    });
-
-    /**
-     * converts marked images into to <video> / <audio> elements
-     *
-     * mutates children !
-     */
-    visit(tree, "element", function (node, index, parent): VisitorResult {
-      if (!parent || index === undefined || node.tagName !== "img") {
-        return;
-      }
-
-      if (!node.properties.markedAsToBeConverted) return CONTINUE;
-
-      const [newTagName, extension] = node.properties.convertionString!.split("/");
-      node.properties.markedAsToBeConverted = undefined;
-      node.properties.convertionString = undefined;
-
-      const src = node.properties.src;
-      node.properties.src = undefined;
-      node.properties.alt = undefined;
-
-      const properties = structuredClone(node.properties);
-
-      if (settings.alwaysAddControlsForVideos && newTagName === "video") {
-        properties["controls"] = true;
-      }
-
-      if (settings.alwaysAddControlsForAudio && newTagName === "audio") {
-        properties["controls"] = true;
-      }
-
-      const newNode: Element = {
-        type: "element",
-        tagName: newTagName,
-        properties,
-        children: [
-          {
-            type: "element",
-            tagName: "source",
-            properties: {
-              src,
-              type: mimeTypesMap[extension],
+              tagName: "source",
+              properties: {
+                src,
+                type: mimeTypesMap[extension],
+              },
+              children: [],
             },
-            children: [],
-          },
-        ],
-      };
+          ],
+        };
 
-      // replace the image with the transformed node
-      parent.children.splice(index, 1, newNode);
-    });
-
-    /**
-     * adds additional properties into assets utilizing the title attribute
-     * adds auto link for images not videos and audio
-     *
-     * mutates children !
-     */
-    visit(tree, "element", function (node, index, parent): VisitorResult {
-      if (!parent || index === undefined || !["img", "video", "audio"].includes(node.tagName)) {
-        return;
+        parent.children.splice(index, 1, newNode);
+        return index;
       }
 
-      const title = node.properties.title;
-      if (title?.includes(">")) {
-        const [mainTitle, directives] = title.split(">");
+      // The part for adding attributes utilizing title ************************
+
+      if (node.properties.title?.includes(">")) {
+        const [mainTitle, directives] = node.properties.title.split(">");
         node.properties.title = mainTitle.trim() || undefined;
 
         const attrs = directives.trim().split(" ").filter(Boolean);
@@ -491,6 +479,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           }
         });
       }
+
+      // The part for adding autolink ***********************************
 
       if (node.properties.markedAsToBeAutoLinked) {
         const src = node.properties.src;
