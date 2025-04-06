@@ -6,7 +6,7 @@ import { processMd, processMdRawFirst } from "./util/index";
 
 describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
-  it("handle basic images / videos / audio", async () => {
+  it("handle basic images and transformation to videos/audio", async () => {
     const input = dedent`
       ![]()
 
@@ -35,7 +35,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle basic images / videos / audio", async () => {
+  it("handle basic paragraph consists of images and transformation to videos/audio", async () => {
     const input = dedent`
       See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
       You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
@@ -61,7 +61,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption for images", async () => {
+  it("handle adding caption for images", async () => {
     const input = dedent`
       ![+Hello](image.png)
 
@@ -87,7 +87,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption above", async () => {
+  it("handle adding caption above for images", async () => {
     const input = dedent`
       ![+Hello](image.png)
 
@@ -113,7 +113,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption for videos", async () => {
+  it("handle adding caption for videos", async () => {
     const input = dedent`
       ![+Hello](video.mp4)
 
@@ -141,7 +141,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption for audio", async () => {
+  it("handle adding caption for audio", async () => {
     const input = dedent`
       ![+Hello](audio.mp3)
 
@@ -169,7 +169,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle transform for videos / audio, if it is last element in a paragraph", async () => {
+  it("handle transformation to videos/audio, the last element", async () => {
     const input = dedent`
       Here is the video ![alt will be disregarded](video.mp4 "title")
 
@@ -188,7 +188,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption for images / videos / audio, if it is last element in a paragraph", async () => {
+  it("handle adding caption for images/videos/audio, the last element", async () => {
     const input = dedent`
       Here is the image ![*Caption of the image](image.png "title")
 
@@ -220,7 +220,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("transform, even it is not last element in a paragraph", async () => {
+  it("handle transformation to videos/audio, in th middle", async () => {
     const input = dedent`
       Hi ![](image.png "title") text
 
@@ -244,7 +244,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("add caption, even it is not the last element in a paragraph", async () => {
+  it("handle adding caption, in the middle", async () => {
     const input = dedent`
       Hi ![*Caption of the image](image.png "title") text
 
@@ -297,7 +297,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle basic html <img>, <video>, and <audio>, extract audio/video wrapped with p due to blank lines", async () => {
+  it("handle basic html <img>, <video>, and <audio>, extract audio/video from paragraph due to blank lines", async () => {
     const input = dedent`
       <img alt="Image Alt" src="image.png">
 
@@ -317,7 +317,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption, in html <img>, <video>, and <audio>", async () => {
+  it("handle adding caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img alt="*Image Caption" src="image.png">
       <video alt="*Video Caption" src="video.mp4"></video>
@@ -346,7 +346,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle caption, in html <img>, <video>, and <audio>, extract audio/video from p due to blank lines", async () => {
+  it("handle adding caption, in html <img>, <video>, and <audio>, extract audio/video from paragraph due to blank lines", async () => {
     const input = dedent`
       <img alt="*Image Caption" src="image.png">
 
@@ -375,7 +375,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle figure with no caption, in html <img>, <video>, and <audio>", async () => {
+  it("handle adding figure with no caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img alt="+" src="image.png">
 
@@ -395,7 +395,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle images / videos / audio in blockquotes", async () => {
+  it("handle adding figure for images/videos/audio in blockquotes", async () => {
     const input = dedent`
       > Here is the image. ![*Image Caption](image.png)
       >
@@ -434,7 +434,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle images / videos / audio in blockquotes", async () => {
+  it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
       > Here is the image. <img alt="*Image Caption" src="image.png">
       >
@@ -567,7 +567,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle transformation videos / audio wrapped with a link ", async () => {
+  it("handle transformation to videos/audio already wrapped with a link ", async () => {
     const input = dedent`
       [![](image.png)](https://example.com)
 
@@ -593,7 +593,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle transformation videos / audio; and handle caption; already wrapped with a link ", async () => {
+  it("handle transformation to videos/audio; and handle adding figure already wrapped with a link ", async () => {
     const input = dedent`
       [![+](image.png)](https://example.com)
 
@@ -621,7 +621,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle autolink for images, using brackets", async () => {
+  it("handle adding autolink for images, using brackets", async () => {
     const input = dedent`
       ![]([image.png]) 
       
@@ -650,7 +650,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle autolink for images, using parentheses", async () => {
+  it("handle adding autolink for images, using parentheses", async () => {
     const input = dedent`
       ![]((image.png)) 
       
@@ -677,7 +677,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add autolink which is already wrapped with a link", async () => {
+  it("does NOT add autolink which is already wrapped with a link", async () => {
     const input = dedent`
       [![alt]([image.png])](https://example.com)
     `;
@@ -693,7 +693,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add autolink which is already wrapped with a link, in the middle", async () => {
+  it("does NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
       Hi [![+alt]([image.png])](https://example.com) text
 
@@ -721,7 +721,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add autolink, but add caption; which is already wrapped with a link", async () => {
+  it("does NOT add autolink, but add caption; which is already wrapped with a link", async () => {
     const input = dedent`
       [![+alt]([image.png])](https://example.com)
 
@@ -753,15 +753,15 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT autolink for videos / audio, just remove brackets from the source", async () => {
+  it("does NOT autolink for videos/audio, just remove brackets from the source", async () => {
     const input = dedent`
       ![]([video.mp4])
 
       ![]([audio.mp3])
 
-      ![+]([video.mp4])
+      ![+]((video.mp4))
 
-      ![+]([audio.mp3])
+      ![+]((audio.mp3))
     `;
 
     const html = String(await processMd(input));
@@ -780,7 +780,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT autolink for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
+  it("does NOT add autolink for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
       [![+]([video.mp4])](www.example.com)
 
@@ -820,7 +820,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("do NOT add autolink for relative links", async () => {
+  it("does NOT add autolink for relative links", async () => {
     const input = dedent`
     ![]([../image.jpeg])
 
