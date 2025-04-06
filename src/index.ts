@@ -26,9 +26,17 @@ declare module "hast" {
 declare module "mdast-util-mdx-jsx" {
   interface MdxJsxFlowElementHastData {
     markedAsToBeAutoLinked?: "bracket" | "parenthesis";
+    markedAsToBeInFigure?: boolean;
+    captionInFigure?: string;
+    markedAsToBeConverted?: boolean;
+    convertionString?: string;
   }
   interface MdxJsxTextElementHastData {
     markedAsToBeAutoLinked?: "bracket" | "parenthesis";
+    markedAsToBeInFigure?: boolean;
+    captionInFigure?: string;
+    markedAsToBeConverted?: boolean;
+    convertionString?: string;
   }
 }
 
@@ -555,7 +563,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const isAnchorParent = parent.type === "mdxJsxFlowElement" && parent.name === "a";
 
         const srcAttribute = node.attributes.find(
-          (a) => a.type === "mdxJsxAttribute" && a.name === "src",
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
         );
 
         if (srcAttribute && typeof srcAttribute.value === "string") {
@@ -586,6 +594,43 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 break; // stop after the first match
               }
             }
+          }
+        }
+
+        // Preparation part for adding figure and caption *****************************
+
+        const altAttribute = node.attributes.find(
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
+        );
+
+        if (altAttribute && typeof altAttribute.value === "string") {
+          const alt = altAttribute.value;
+          const startsWith = {
+            plus: alt.startsWith("+"),
+            star: alt.startsWith("*"),
+            caption: alt.startsWith("caption:"),
+          };
+
+          if (startsWith.plus || startsWith.star || startsWith.caption) {
+            node.data ??= {};
+            node.data.markedAsToBeInFigure = true;
+
+            const figcaptionText =
+              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+
+            node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+            altAttribute.value = node.name === "img" ? figcaptionText : undefined;
+          }
+        }
+
+        // Preparation part for convertion to video/audio ****************************
+        if (srcAttribute && typeof srcAttribute.value === "string") {
+          const extension = getExtension(srcAttribute.value);
+          const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+          if (needsConversion && node.name === "img") {
+            node.data ??= {};
+            node.data.markedAsToBeConverted = true;
+            node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
           }
         }
       },
