@@ -28,7 +28,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO handle mdxJsxFlowElement
   // ******************************************
   it("MDX source, handle autolinks", async () => {
     const input = dedent`
@@ -69,6 +68,41 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>"
+    `);
+  });
+
+  // ******************************************
+  it("MDX source, handle caption for images", async () => {
+    const input = dedent`
+      ![+Hello](image.png)
+
+      ![*Hello](image.png)
+
+      ![caption:Hello](image.png)
+
+      <img src="image.png" alt="+Hello" />
+
+      <img src="image.png" alt="*Hello" />
+
+      <img src="image.png" alt="caption:Hello" />
+    `;
+
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<figure><img src="image.png" alt="Hello"/></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
+      <figure><img src="image.png" alt="Hello"/></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>"
+    `);
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<figure><img src="image.png" alt="Hello"/></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
+      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
+      <img src="image.png" alt="Hello"/>
+      <img src="image.png" alt="Hello"/>
+      <img src="image.png" alt="Hello"/>"
     `);
   });
 });
