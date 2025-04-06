@@ -23,6 +23,15 @@ declare module "hast" {
   }
 }
 
+declare module "mdast-util-mdx-jsx" {
+  interface MdxJsxFlowElementHastData {
+    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
+  }
+  interface MdxJsxTextElementHastData {
+    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
+  }
+}
+
 export type ImageHackOptions = {
   figureCaptionPosition?: "above" | "below";
   alwaysAddControlsForVideos?: boolean;
@@ -149,7 +158,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    * Transform.
    */
   return (tree: Root): undefined => {
-    // console.dir(tree, { depth: 8 });
+    console.dir(tree, { depth: 8 });
 
     /**
      * visit for preparation
@@ -528,14 +537,144 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
     });
 
-    // visit(tree, "mdxJsxFlowElement", function (node, index, parent): VisitorResult {
-    //   /* v8 ignore next 3 */
-    //   if (!parent || index === undefined || node.type !== "mdxJsxFlowElement") {
-    //     return;
-    //   }
+    visit(
+      tree,
+      ["mdxJsxFlowElement", "mdxJsxTextElement"],
+      function (node, index, parent): VisitorResult {
+        /* v8 ignore next 3 */
+        if (!parent || index === undefined) return;
 
-    //   // handle for mdx elements in MDX format
-    // });
+        if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
+
+        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
+          return;
+        }
+
+        // Preparation part for adding autolink ***************************************
+
+        const isAnchorParent = parent.type === "mdxJsxFlowElement" && parent.name === "a";
+
+        const srcAttribute = node.attributes.find(
+          (a) => a.type === "mdxJsxAttribute" && a.name === "src",
+        );
+
+        if (srcAttribute && typeof srcAttribute.value === "string") {
+          let src = srcAttribute.value;
+          const wrappers = [
+            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
+            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
+          ];
+
+          for (const { wrapper, raw, encoded } of wrappers) {
+            const isRaw = raw.test(src);
+            const isEncoded = !isRaw && encoded.test(src);
+
+            if (isRaw || isEncoded) {
+              const sliceAmount = isRaw ? 1 : 3;
+              src = src.slice(sliceAmount, -sliceAmount);
+              srcAttribute.value = src;
+
+              const isValidAutolink =
+                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+                rootRelativeRegex.test(src) ||
+                wwwRegex.test(src) ||
+                fileLinkRegex.test(src);
+
+              if (node.name === "img" && !isAnchorParent && isValidAutolink) {
+                node.data ??= {};
+                node.data.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
+                break; // stop after the first match
+              }
+            }
+          }
+        }
+      },
+    );
+
+    visit(
+      tree,
+      ["mdxJsxFlowElement", "mdxJsxTextElement"],
+      function (node, index, parent): VisitorResult {
+        /* v8 ignore next 3 */
+        if (!parent || index === undefined) return;
+
+        if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
+
+        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
+          return;
+        }
+
+        // The part for adding autolink ***********************************
+
+        if (node.data?.markedAsToBeAutoLinked) {
+          const srcAttribute = node.attributes.find(
+            (a) => a.type === "mdxJsxAttribute" && a.name === "src",
+          );
+          const src = srcAttribute?.value;
+          const marker = node.data.markedAsToBeAutoLinked;
+          node.data.markedAsToBeAutoLinked = undefined;
+
+          const isFigureParent =
+            parent.type === "mdxJsxFlowElement" && parent.name === "figure";
+
+          if (isFigureParent && marker === "bracket") {
+            // find the parent index so as the anchor covers the parent
+            visitParents(tree, "mdxJsxFlowElement", function (targetNode, ancestors) {
+              if (targetNode !== parent) return;
+
+              const grandparent = ancestors.at(-1);
+              if (
+                !grandparent ||
+                !("children" in grandparent) ||
+                !Array.isArray(grandparent.children)
+                /* v8 ignore next 3 */
+              ) {
+                return;
+              }
+
+              const parentIndex = grandparent.children.indexOf(parent);
+              if (parentIndex !== -1) {
+                grandparent.children.splice(parentIndex, 1, {
+                  type: "mdxJsxFlowElement",
+                  name: "a",
+                  attributes: [
+                    {
+                      type: "mdxJsxAttribute",
+                      name: "href",
+                      value: src,
+                    },
+                    {
+                      type: "mdxJsxAttribute",
+                      name: "target",
+                      value: "_blank",
+                    },
+                  ],
+                  children: [parent],
+                });
+              }
+            });
+          } else {
+            parent.children.splice(index, 1, {
+              type: "mdxJsxFlowElement",
+              name: "a",
+              attributes: [
+                {
+                  type: "mdxJsxAttribute",
+                  name: "href",
+                  value: src,
+                },
+                {
+                  type: "mdxJsxAttribute",
+                  name: "target",
+                  value: "_blank",
+                },
+              ],
+              children: [node],
+            });
+          }
+        }
+      },
+    );
   };
 };
 
