@@ -22,6 +22,28 @@ describe("reyhpe-image-hack from html source", () => {
       <img src="image.png" alt="">"
     `);
   });
+
+  // *************************************
+  it("process html input", async () => {
+    const input = dedent`
+      <p>
+        It adds autolink.
+        <img src="[https://example.com/image.png]" alt="alt">
+      </p>
+      <p>
+        It adds caption.
+        <img src="image.png" alt="*Image Caption">
+      </p>
+      <p>
+        It adds attributes.
+        <img src="image.png" title="> 60x60">
+      </p>
+  `;
+
+    const output = String(await utils.processHtml(input));
+
+    expect(output).toBe(input);
+  });
 });
 
 describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
@@ -76,6 +98,21 @@ describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
     const html = String(await utils.processMd(input));
 
     expect(html).toMatchInlineSnapshot(`"<p><img src="image.png" alt=""></p>"`);
+  });
+
+  // ******************************************
+  it("handle basic paragraph that consists of image syntaxes", async () => {
+    const input = dedent`
+      See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
+    `;
+
+    const html = String(await utils.processMd(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>See the figure below. <img src="image.png" alt="*Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
+      You see the video and sound below. <img src="video.mp4" alt=""><img src="audio.mp3" alt=""> Both video and audio tell the truth.</p>"
+    `);
   });
 });
 
@@ -224,25 +261,18 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
     `);
   });
 
-  // *************************************
-  it("process html input", async () => {
+  // ******************************************
+  it("handle basic paragraph that consists of image syntaxes", async () => {
     const input = dedent`
-      <p>
-        It adds autolink.
-        <img src="[https://example.com/image.png]" alt="alt">
-      </p>
-      <p>
-        It adds caption.
-        <img src="image.png" alt="*Image Caption">
-      </p>
-      <p>
-        It adds attributes.
-        <img src="image.png" title="> 60x60">
-      </p>
-  `;
+      See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
+    `;
 
-    const output = String(await utils.processHtml(input));
+    const html = String(await utils.processMdRaw(input));
 
-    expect(output).toBe(input);
+    expect(html).toMatchInlineSnapshot(`
+      "<p>See the figure below. <img src="image.png" alt="*Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
+      You see the video and sound below. <img src="video.mp4" alt=""><img src="audio.mp3" alt=""> Both video and audio tell the truth.</p>"
+    `);
   });
 });
