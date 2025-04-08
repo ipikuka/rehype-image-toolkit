@@ -2,6 +2,7 @@ import type { Plugin } from "unified";
 import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
+import { whitespace } from "hast-util-whitespace";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
@@ -159,7 +160,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    * Transform.
    */
   return (tree: Root): undefined => {
-    console.dir(tree, { depth: 8 });
+    // console.dir(tree, { depth: 8 });
 
     /**
      * visit for preparation
@@ -252,60 +253,44 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       if (!parent || index === undefined || node.tagName !== "p") return;
 
       const newNodes: RootContent[] = [];
-      let hasNonWhitespace = false;
       let currentParagraph: Element = createEmptyParagraph();
 
-      let inSplitMode = false;
-      let referenceToLastTextElement: Text | undefined;
-
-      for (const [i, element] of node.children.entries()) {
+      for (const element of node.children) {
         if (isRelevant(element)) {
-          inSplitMode = true;
-          const prevHasNonWhitespace = hasNonWhitespace;
-
-          flushParagraph(); // it may toggle the hasNonWhitespace
-
-          if (prevHasNonWhitespace) {
-            newNodes.push({ type: "text", value: "\n" }, element);
-          } else {
-            newNodes.push(element);
-          }
-
           flushParagraph();
+          newNodes.push(element);
         } else {
-          if (element.type === "text" && inSplitMode) {
-            inSplitMode = false;
-            const match = element.value.match(RE_LEADING_WHITESPACE);
-            const leadingWhitespace = match?.[1];
-            if (leadingWhitespace) element.value.replace(RE_LEADING_WHITESPACE, "");
-
-            if (referenceToLastTextElement) {
-              referenceToLastTextElement.value = referenceToLastTextElement.value.replace(
-                RE_TRAILING_WHITESPACE,
-                leadingWhitespace ?? "",
-              );
-            }
-          }
-
-          if (element.type !== "text" || element.value !== "") {
-            currentParagraph.children.push(element);
-            if (element.type === "text") referenceToLastTextElement = element;
-          }
-
-          if (element.type !== "text" || element.value.trim() !== "") {
-            hasNonWhitespace = true;
-          }
+          currentParagraph.children.push(element);
         }
       }
 
       flushParagraph();
 
-      // trim the edge texts in the paragraphs
-      newNodes.forEach(
-        (n) => n.type === "element" && n.tagName === "p" && trimParagraphEdges(n),
-      );
+      // filter empty paragraphs
+      const filtered = newNodes.filter((n) => {
+        return !(n.type === "element" && n.tagName === "p" && n.children.every(whitespace));
+      });
 
-      parent.children.splice(index, 1, ...newNodes);
+      // trim the text on edges
+      filtered.forEach((n) => {
+        n.type === "element" && n.tagName === "p" && trimParagraphEdges(n);
+      });
+
+      // insert new line between each nodes
+      const inserted = insertBetween(filtered, { type: "text", value: "\n" });
+
+      parent.children.splice(index, 1, ...inserted);
+
+      function insertBetween(arr: RootContent[], element: Text): RootContent[] {
+        return arr.flatMap((item, index) =>
+          index < arr.length - 1 ? [item, element] : [item],
+        );
+      }
+
+      function flushParagraph() {
+        newNodes.push(currentParagraph);
+        currentParagraph = createEmptyParagraph();
+      }
 
       function createEmptyParagraph(): Element {
         return {
@@ -316,19 +301,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         };
       }
 
-      function flushParagraph() {
-        if (hasNonWhitespace) {
-          newNodes.push(currentParagraph);
-        }
-
-        hasNonWhitespace = false;
-        currentParagraph = createEmptyParagraph();
-      }
-
-      /**
-       * Trim only spaces (not tabs or newlines) from the beginning of the first text node
-       * and the end of the last text node in a paragraph node.
-       */
       function trimParagraphEdges(paragraph: Element) {
         const first = paragraph.children[0];
         const last = paragraph.children[paragraph.children.length - 1];
