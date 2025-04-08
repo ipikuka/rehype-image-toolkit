@@ -32,10 +32,20 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p><img src="invalid" alt="" /></p>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="" alt=""></p>
+      <p><img src="image.png" alt=""></p>
+      <video><source src="video.mp4" type="video/mp4"></video>
+      <audio><source src="audio.mp3" type="audio/mpeg"></audio>
+      <p><img src="unknown.xxx" alt=""></p>
+      <p><img src="invalid" alt=""></p>"
+    `);
   });
 
+  // TODO preserve the end of lines, delete whitespace
   // ******************************************
-  it("handle basic paragraph consists of images and transformation to videos/audio", async () => {
+  it("handle basic paragraph that consists of images to be transformed to videos/audio", async () => {
     const input = dedent`
       See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
       You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
@@ -43,20 +53,14 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     const html = String(await processMd(input));
 
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+    expect(html).toMatchInlineSnapshot(`
       "<p>See the figure below.</p>
-      <figure>
-        <img src="image.png" alt="Caption" />
-        <figcaption>Caption</figcaption>
-      </figure>
-      <p>
-        Here is the small icons <img src="image1.png" alt="" />
-        <img src="image2.png" alt="" /> You see the video and sound below.
-      </p>
-      <video><source src="video.mp4" type="video/mp4" /></video
-      ><audio><source src="audio.mp3" type="audio/mpeg" /></audio>
-      <p>Both video and audio tell the truth.</p>
-      "
+      <figure><img src="image.png" alt="Caption"><figcaption>Caption</figcaption></figure>
+      <p>Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
+      You see the video and sound below.</p>
+      <video><source src="video.mp4" type="video/mp4"></video>
+      <audio><source src="audio.mp3" type="audio/mpeg"></audio>
+      <p>Both video and audio tell the truth.</p>"
     `);
   });
 
@@ -84,6 +88,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><img src="image.png" alt="Hello"></figure>
+      <figure><img src="image.png" alt="Hello"><figcaption>Hello</figcaption></figure>
+      <figure><img src="image.png" alt="Hello"><figcaption>Hello</figcaption></figure>"
+    `);
   });
 
   // ******************************************
@@ -109,6 +119,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <img src="image.png" alt="Hello" />
       </figure>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><img src="image.png" alt="Hello"></figure>
+      <figure><figcaption>Hello</figcaption><img src="image.png" alt="Hello"></figure>
+      <figure><figcaption>Hello</figcaption><img src="image.png" alt="Hello"></figure>"
     `);
   });
 
@@ -138,6 +154,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><video><source src="video.mp4" type="video/mp4"></video></figure>
+      <figure><video><source src="video.mp4" type="video/mp4"></video><figcaption>Hello</figcaption></figure>
+      <figure><video><source src="video.mp4" type="video/mp4"></video><figcaption>Hello</figcaption></figure>"
+    `);
   });
 
   // ******************************************
@@ -166,6 +188,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><audio><source src="audio.mp3" type="audio/mpeg"></audio></figure>
+      <figure><audio><source src="audio.mp3" type="audio/mpeg"></audio><figcaption>Hello</figcaption></figure>
+      <figure><audio><source src="audio.mp3" type="audio/mpeg"></audio><figcaption>Hello</figcaption></figure>"
+    `);
   });
 
   // ******************************************
@@ -184,6 +212,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p>Here is the audio</p>
       <audio title="title"><source src="audio.mp3" type="audio/mpeg" /></audio>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Here is the video</p>
+      <video title="title"><source src="video.mp4" type="video/mp4"></video>
+      <p>Here is the audio</p>
+      <audio title="title"><source src="audio.mp3" type="audio/mpeg"></audio>"
     `);
   });
 
@@ -217,8 +252,18 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Here is the image</p>
+      <figure><img src="image.png" alt="Caption of the image" title="title"><figcaption>Caption of the image</figcaption></figure>
+      <p>Here is the video</p>
+      <figure><video title="title"><source src="video.mp4" type="video/mp4"></video><figcaption>Caption of the video</figcaption></figure>
+      <p>Here is the audio</p>
+      <figure><audio title="title"><source src="audio.mp3" type="audio/mpeg"></audio><figcaption>Caption of the audio</figcaption></figure>"
+    `);
   });
 
+  // TODO handle end of line just after audio and video
   // ******************************************
   it("handle transformation to videos/audio, in th middle", async () => {
     const input = dedent`
@@ -241,8 +286,19 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p>text</p>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Hi <img src="image.png" alt="" title="title"> text</p>
+      <p>Hi</p>
+      <video title="title"><source src="video.mp4" type="video/mp4"></video>
+      <p>text</p>
+      <p>Hi</p>
+      <audio title="title"><source src="audio.mp3" type="audio/mpeg"></audio>
+      <p>text</p>"
+    `);
   });
 
+  // TODO handle eof after figure
   // ******************************************
   it("handle adding caption, in the middle", async () => {
     const input = dedent`
@@ -276,6 +332,18 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p>text</p>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Hi</p>
+      <figure><img src="image.png" alt="Caption of the image" title="title"><figcaption>Caption of the image</figcaption></figure>
+      <p>text</p>
+      <p>Hi</p>
+      <figure><video title="title"><source src="video.mp4" type="video/mp4"></video><figcaption>Caption of the video</figcaption></figure>
+      <p>text</p>
+      <p>Hi</p>
+      <figure><audio title="title"><source src="audio.mp3" type="audio/mpeg"></audio><figcaption>Caption of the audio</figcaption></figure>
+      <p>text</p>"
+    `);
   });
 
   // ******************************************
@@ -293,6 +361,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <video src="video.mp4"></video>
       <audio src="audio.mp3"></audio>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img alt="Image Alt" src="image.png">
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>"
     `);
   });
 
@@ -314,6 +388,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <audio src="audio.mp3"></audio>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img alt="Image Alt" src="image.png">
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>"
+    `);
   });
 
   // ******************************************
@@ -322,7 +402,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <img alt="*Image Caption" src="image.png">
       <video alt="*Video Caption" src="video.mp4"></video>
       <audio alt="*Audio Caption" src="audio.mp3"></audio>
-      <p>hello</p>
     `;
 
     const html = String(await processMdRawFirst(input));
@@ -340,8 +419,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <audio src="audio.mp3"></audio>
         <figcaption>Audio Caption</figcaption>
       </figure>
-      <p>hello</p>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><img alt="Image Caption" src="image.png"><figcaption>Image Caption</figcaption></figure>
+      <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure>
+      <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure>"
     `);
   });
 
@@ -372,6 +456,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><img alt="Image Caption" src="image.png"><figcaption>Image Caption</figcaption></figure>
+      <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure>
+      <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure>"
+    `);
   });
 
   // ******************************************
@@ -391,6 +481,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <figure><video src="video.mp4"></video></figure>
       <figure><audio src="audio.mp3"></audio></figure>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<figure><img alt="" src="image.png"></figure>
+      <figure><video src="video.mp4"></video></figure>
+      <figure><audio src="audio.mp3"></audio></figure>"
     `);
   });
 
@@ -431,8 +527,20 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </blockquote>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<blockquote>
+      <p>Here is the image.</p>
+      <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
+      <p>Here is the video.</p>
+      <figure><video controls><source src="video.mp4" type="video/mp4"></video><figcaption>Video Caption</figcaption></figure>
+      <p>Here is the audio.</p>
+      <figure><audio controls><source src="audio.mp3" type="audio/mpeg"></audio><figcaption>Audio Caption</figcaption></figure>
+      </blockquote>"
+    `);
   });
 
+  // TODO handle spaces
   // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
@@ -464,6 +572,17 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         </figure>
       </blockquote>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<blockquote>
+      <p>Here is the image.</p>
+      <figure><img alt="Image Caption" src="image.png"><figcaption>Image Caption</figcaption></figure>
+      <p>Here is the video.</p>
+      <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure>
+      <p>Here is the audio.</p>
+      <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure>
+      </blockquote>"
     `);
   });
 
@@ -498,6 +617,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </audio>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="alt" title="title" id="image-id" class="image-class" style="width:2rem;height:1rem;"></p>
+      <video title="title" id="video-id" class="video-class" width="200" height="100"><source src="video.mp4" type="video/mp4"></video>
+      <audio title="title" id="audio-id" class="audio-class" autoplay><source src="audio.mp3" type="audio/mpeg"></audio>"
+    `);
   });
 
   // ******************************************
@@ -527,6 +652,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         />
       </p>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="alt" title="title" width="400" height="300" loading="lazy">
+      <img src="image.png" alt="alt" title="title" style="width:50%;height:3rem;"></p>"
     `);
   });
 
@@ -564,6 +694,14 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </video>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<video title="title" width="400" height="300" autoplay muted poster="image.png"><source src="video.mp4" type="video/mp4"></video>
+      <video style="width:70%;max-width:500px;" controls autoplay loop><source src="video.mp4" type="video/mp4"></video>
+      <video style="height:70%;max-width:500px;" controls autoplay loop><source src="video.mp4" type="video/mp4"></video>
+      <video autoplay loop style="max-width:500px;height:70%;" controls><source src="video.mp4" type="video/mp4"></video>
+      <video autoplay loop style="max-width:500px;width:70%;" controls><source src="video.mp4" type="video/mp4"></video>"
+    `);
   });
 
   // ******************************************
@@ -589,6 +727,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         ><audio><source src="audio.mp3" type="audio/mpeg" /></audio
       ></a>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"><img src="image.png" alt=""></a></p>
+      <a href="https://example.com"><video><source src="video.mp4" type="video/mp4"></video></a>
+      <a href="https://example.com"><audio><source src="audio.mp3" type="audio/mpeg"></audio></a>"
     `);
   });
 
@@ -617,6 +761,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
           <audio><source src="audio.mp3" type="audio/mpeg" /></audio></figure
       ></a>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<a href="https://example.com"><figure><img src="image.png" alt=""></figure></a>
+      <a href="https://example.com"><figure><video><source src="video.mp4" type="video/mp4"></video></figure></a>
+      <a href="https://example.com"><figure><audio><source src="audio.mp3" type="audio/mpeg"></audio></figure></a>"
     `);
   });
 
@@ -647,6 +797,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       >
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><a href="image.png" target="_blank"><img src="image.png" alt=""></a></p>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="alt"></figure></a>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="caption"><figcaption>caption</figcaption></figure></a>"
+    `);
   });
 
   // ******************************************
@@ -674,6 +830,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><a href="image.png" target="_blank"><img src="image.png" alt=""></a></p>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="alt"></a></figure>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="caption"></a><figcaption>caption</figcaption></figure>"
+    `);
   });
 
   // ******************************************
@@ -690,8 +852,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </p>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(
+      `"<p><a href="https://example.com"><img src="image.png" alt="alt"></a></p>"`,
+    );
   });
 
+  // TODO delete the last whitespaces in previous paragraph while splitting, and put eol before paragraph
   // ******************************************
   it("does NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
@@ -717,6 +884,15 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       >
       <p>text</p>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Hi</p>
+      <a href="https://example.com"><figure><img src="image.png" alt="alt"></figure></a>
+      <p>text</p>
+      <p>Hi</p>
+      <a href="https://example.com"><figure><img src="image.png" alt="alt"><figcaption>alt</figcaption></figure></a>
+      <p>text</p>"
     `);
   });
 
@@ -750,6 +926,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       >
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<a href="https://example.com"><figure><img src="image.png" alt="alt"></figure></a>
+      <a href="https://example.com"><figure><img src="image.png" alt="alt"><figcaption>alt</figcaption></figure></a>
+      <a href="https://example.com"><figure><img src="image.png" alt="alt"><figcaption>alt</figcaption></figure></a>"
+    `);
   });
 
   // ******************************************
@@ -776,6 +958,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <audio><source src="audio.mp3" type="audio/mpeg" /></audio>
       </figure>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<video><source src="video.mp4" type="video/mp4"></video>
+      <audio><source src="audio.mp3" type="audio/mpeg"></audio>
+      <figure><video><source src="video.mp4" type="video/mp4"></video></figure>
+      <figure><audio><source src="audio.mp3" type="audio/mpeg"></audio></figure>"
     `);
   });
 
@@ -817,6 +1006,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       ></a>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<a href="www.example.com"><figure><video><source src="video.mp4" type="video/mp4"></video></figure></a>
+      <a href="www.example.com"><figure><audio><source src="audio.mp3" type="audio/mpeg"></audio></figure></a>
+      <a href="www.example.com"><figure><img src="image.png" alt=""></figure> <figure><video><source src="video.mp4" type="video/mp4"></video></figure> <figure><audio><source src="video.mp3" type="audio/mpeg"></audio></figure></a>
+      <a href="www.example.com"><img src="image.png" alt=""> <video><source src="video.mp4" type="video/mp4"></video> <audio><source src="video.mp3" type="audio/mpeg"></audio></a>"
+    `);
   });
 
   // ******************************************
@@ -837,8 +1033,14 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       </figure>
       "
     `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="../image.jpeg" alt=""></p>
+      <figure><img src="../image.jpeg" alt="Hello"><figcaption>Hello</figcaption></figure>"
+    `);
   });
 
+  // TODO look at carefully, delete whitespaces last one
   // ******************************************
   it("example in the README", async () => {
     const input = dedent`
@@ -872,6 +1074,16 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <source src="video.mp4" type="video/mp4" />
       </video>
       "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>It converts images to audio/videos.</p>
+      <video><source src="video.mp4" type="video/mp4"></video>
+      <p>It adds autolink. <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a></p>
+      <p>It adds caption.</p>
+      <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
+      <p>It adds attributes.</p>
+      <video title="title" width="640" height="480" autoplay><source src="video.mp4" type="video/mp4"></video>"
     `);
   });
 });
