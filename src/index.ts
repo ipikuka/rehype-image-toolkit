@@ -149,13 +149,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
   const RE_LEADING_WHITESPACE = /^(\s*)/;
   const RE_TRAILING_WHITESPACE = /(\s*)$/;
-
-  function getLeadingWhitespace(text: string) {
-    const match = text.match(RE_LEADING_WHITESPACE);
-    /* v8 ignore next */
-    return match ? match[1] : "";
-  }
-
   const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
   const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
   const wwwRegex = /^www\./i; // www links
@@ -265,7 +258,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       let inSplitMode = false;
       let referenceToLastTextElement: Text | undefined;
 
-      for (const element of node.children) {
+      for (const [i, element] of node.children.entries()) {
         if (isRelevant(element)) {
           inSplitMode = true;
           const prevHasNonWhitespace = hasNonWhitespace;
@@ -282,13 +275,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         } else {
           if (element.type === "text" && inSplitMode) {
             inSplitMode = false;
-            const leadingWhitespace = getLeadingWhitespace(element.value);
-            element.value.replace(RE_LEADING_WHITESPACE, "");
+            const match = element.value.match(RE_LEADING_WHITESPACE);
+            const leadingWhitespace = match?.[1];
+            if (leadingWhitespace) element.value.replace(RE_LEADING_WHITESPACE, "");
 
             if (referenceToLastTextElement) {
               referenceToLastTextElement.value = referenceToLastTextElement.value.replace(
                 RE_TRAILING_WHITESPACE,
-                leadingWhitespace,
+                leadingWhitespace ?? "",
               );
             }
           }
@@ -305,6 +299,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
 
       flushParagraph();
+
+      // trim the edge texts in the paragraphs
+      newNodes.forEach(
+        (n) => n.type === "element" && n.tagName === "p" && trimParagraphEdges(n),
+      );
+
       parent.children.splice(index, 1, ...newNodes);
 
       function createEmptyParagraph(): Element {
@@ -320,8 +320,26 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         if (hasNonWhitespace) {
           newNodes.push(currentParagraph);
         }
+
         hasNonWhitespace = false;
         currentParagraph = createEmptyParagraph();
+      }
+
+      /**
+       * Trim only spaces (not tabs or newlines) from the beginning of the first text node
+       * and the end of the last text node in a paragraph node.
+       */
+      function trimParagraphEdges(paragraph: Element) {
+        const first = paragraph.children[0];
+        const last = paragraph.children[paragraph.children.length - 1];
+
+        if (first?.type === "text") {
+          first.value = first.value.replace(/^[ ]+/, "");
+        }
+
+        if (last?.type === "text") {
+          last.value = last.value.replace(/[ ]+$/, "");
+        }
       }
 
       function isRelevant(element: ElementContent) {

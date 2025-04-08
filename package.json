@@ -16,6 +16,7 @@
     "test:md": "vitest test.md.spec.ts",
     "test:html": "vitest test.html.spec.ts",
     "test:mdx": "vitest test.mdx.spec.ts",
+    "test:mdx2": "vitest test.mdx2.spec.ts",
     "test:ref": "vitest test.reference.spec.ts",
     "test:refmdx": "vitest test.reference.mdx.spec.ts",
     "prepack": "npm run build",
