@@ -4,8 +4,12 @@ import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
+import type {
+  MdxJsxAttribute,
+  MdxJsxAttributeValueExpression,
+  MdxJsxExpressionAttribute,
+  MdxJsxFlowElementHast,
+} from "mdast-util-mdx-jsx";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -160,7 +164,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    * Transform.
    */
   return (tree: Root): undefined => {
-    // console.dir(tree, { depth: 8 });
+    console.dir(tree, { depth: 12 });
 
     /**
      * visit for preparation
@@ -179,6 +183,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding autolink ***************************************
 
       const isAnchorParent = parent.type === "element" && parent.tagName === "a";
+
+      // const src = decodeURI(String(node.properties.src));
 
       let src = node.properties.src;
       if (src) {
@@ -485,7 +491,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               }
             }
           } else {
-            node.properties[attr] = true;
+            node.properties[attr] = "x";
           }
         });
       }
@@ -544,7 +550,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
 
-        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
+        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
           return;
         }
 
@@ -626,6 +632,142 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       },
     );
 
+    console.dir(tree, { depth: 8 });
+
+    function updateOrAddMdxAttribute(
+      attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
+      name: string,
+      value: MdxJsxAttributeValueExpression | string | number | boolean | null | undefined,
+    ): void {
+      const existing = attributes.find(
+        (attr) => attr.type === "mdxJsxAttribute" && attr.name === name,
+      );
+
+      if (value === undefined) {
+        if (existing) attributes.splice(attributes.indexOf(existing), 1);
+
+        return;
+      }
+
+      if (value === null || value === true) {
+        if (existing) {
+          existing.value = null;
+        } else {
+          attributes.push({ type: "mdxJsxAttribute", name, value: null });
+        }
+
+        return;
+      }
+
+      // Normalize value into a usable form
+      const isExpression = typeof value === "object";
+      const newValueStr = isExpression ? value.value : String(value);
+
+      if (existing) {
+        if (name === "class") {
+          const current =
+            typeof existing.value === "string"
+              ? existing.value
+              : existing.value != null
+                ? existing.value.value
+                : existing.value;
+
+          const currentClasses = new Set(current?.split(/\s+/).filter(Boolean));
+          currentClasses.add(newValueStr);
+          const merged = Array.from(currentClasses).join(" ");
+
+          // Keep it a string unless it was originally an expression
+          existing.value =
+            typeof existing.value === "string"
+              ? merged
+              : {
+                  type: "mdxJsxAttributeValueExpression",
+                  value: JSON.stringify(merged),
+                };
+        } else if (name === "style") {
+          const current =
+            typeof existing.value === "string"
+              ? existing.value
+              : existing.value != null
+                ? existing.value.value
+                : existing.value;
+
+          const appended =
+            current == null ? newValueStr : current + current.endsWith(";") ? "" : ";";
+
+          existing.value =
+            typeof existing.value === "string"
+              ? appended
+              : { type: "mdxJsxAttributeValueExpression", value: JSON.stringify(appended) };
+        } else {
+          existing.value = String(value);
+        }
+      } else {
+        attributes.push({
+          type: "mdxJsxAttribute",
+          name,
+          value: isExpression ? value : String(value),
+        });
+      }
+    }
+
+    // function getAttributeValue(
+    //   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
+    //   name: string,
+    // ): string | undefined {
+    //   for (const attr of attributes) {
+    //     if (
+    //       attr.type === "mdxJsxAttribute" &&
+    //       attr.name === name &&
+    //       typeof attr.value === "string"
+    //     ) {
+    //       return attr.value;
+    //     }
+    //   }
+
+    //   return undefined;
+    // }
+    // function getAttribute(
+    //   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
+    //   name: string,
+    // ): MdxJsxAttribute | undefined {
+    //   for (const attr of attributes) {
+    //     if (attr.type === "mdxJsxAttribute" && attr.name === name) {
+    //       return attr;
+    //     }
+    //   }
+
+    //   return undefined;
+    // }
+
+    function program(body: any[]): any {
+      return {
+        estree: {
+          type: "Program",
+          body: body,
+          sourceType: "module",
+          comments: [],
+        },
+      };
+    }
+
+    function getLiteralAttribute(value: string): any {
+      return {
+        type: "mdxJsxAttributeValueExpression",
+        value: "",
+        data: program([
+          {
+            type: "ExpressionStatement",
+            expression: {
+              type: "Literal",
+              value: value,
+              raw: JSON.stringify(value),
+            },
+          },
+        ]),
+      };
+    }
+
     visit(
       tree,
       ["mdxJsxFlowElement", "mdxJsxTextElement"],
@@ -635,8 +777,198 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
 
-        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
+        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
           return;
+        }
+
+        // The part for adding figure and caption ****************************
+
+        if (node.data?.markedAsToBeInFigure) {
+          const caption = node.data.captionInFigure;
+
+          const figcaptionElement: MdxJsxFlowElementHast | undefined =
+            caption === undefined
+              ? undefined
+              : {
+                  type: "mdxJsxFlowElement",
+                  name: "figcaption",
+                  attributes: [],
+                  children: [{ type: "text", value: caption }],
+                };
+
+          const figureElement: MdxJsxFlowElementHast = {
+            type: "mdxJsxFlowElement",
+            name: "figure",
+            attributes: [],
+            children: figcaptionElement
+              ? settings.figureCaptionPosition === "above"
+                ? [figcaptionElement, node]
+                : [node, figcaptionElement]
+              : [node],
+          };
+
+          node.data.markedAsToBeInFigure = undefined;
+          node.data.captionInFigure = undefined;
+
+          parent.children.splice(index, 1, figureElement);
+          return index;
+        }
+
+        // The part for convertion to video/audio ****************************
+
+        if (node.data?.markedAsToBeConverted) {
+          const [newTagName, extension] = node.data.convertionString!.split("/");
+          node.data.markedAsToBeConverted = undefined;
+          node.data.convertionString = undefined;
+
+          const srcAttribute = node.attributes.find(
+            (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
+          );
+
+          const src = srcAttribute?.value;
+
+          node.attributes = node.attributes.filter(
+            (attr) =>
+              attr.type === "mdxJsxAttribute" && attr.name !== "src" && attr.name !== "alt",
+          );
+
+          const attributes = structuredClone(node.attributes);
+
+          if (settings.alwaysAddControlsForVideos && newTagName === "video") {
+            attributes.push({
+              type: "mdxJsxAttribute",
+              name: "controls",
+              value: "true",
+            });
+          }
+
+          if (settings.alwaysAddControlsForAudio && newTagName === "audio") {
+            attributes.push({
+              type: "mdxJsxAttribute",
+              name: "controls",
+              value: "true",
+            });
+          }
+
+          const newNode: MdxJsxFlowElementHast = {
+            type: "mdxJsxFlowElement",
+            name: newTagName,
+            attributes,
+            children: [
+              {
+                type: "mdxJsxFlowElement",
+                name: "source",
+                attributes: [
+                  {
+                    type: "mdxJsxAttribute",
+                    name: "src",
+                    value: src,
+                  },
+                  {
+                    type: "mdxJsxAttribute",
+                    name: "type",
+                    value: mimeTypesMap[extension],
+                  },
+                ],
+                children: [],
+              },
+            ],
+          };
+
+          parent.children.splice(index, 1, newNode);
+          return index;
+        }
+
+        // The part for adding attributes utilizing title ************************
+
+        const titleAttribute = node.attributes.find(
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "title",
+        );
+
+        console.log({ titleAttribute: titleAttribute?.value });
+
+        if (
+          titleAttribute?.type === "mdxJsxAttribute" &&
+          typeof titleAttribute.value === "string"
+        ) {
+          const title = titleAttribute.value;
+          if (title.includes(">")) {
+            const [mainTitle, directives] = title.split(">");
+            titleAttribute.value = mainTitle.trim() || undefined;
+
+            const attrs = directives.trim().split(" ").filter(Boolean);
+            if (attrs.length) {
+              const attributes = structuredClone(node.attributes);
+
+              attrs.forEach((attr) => {
+                if (attr.startsWith("#")) {
+                  updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
+                } else if (attr.startsWith(".")) {
+                  updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
+                } else if (attr.includes("=")) {
+                  const [key, value] = attr.split("=");
+                  if (key === "width" || key === "height") {
+                    const match = value.match(/^(\d+)(?:px)?$/);
+                    if (match) {
+                      updateOrAddMdxAttribute(attributes, key, Number(match[1]));
+                    } else {
+                      updateOrAddMdxAttribute(attributes, "style", `${key}:${value};`);
+                    }
+                  } else if (key === "style") {
+                    updateOrAddMdxAttribute(attributes, "style", `${value};`);
+                  } else {
+                    updateOrAddMdxAttribute(attributes, key, value);
+                  }
+                } else if (attr.includes("x")) {
+                  const [width, height] = attr.split("x");
+                  console.log({ width, height });
+
+                  if (width) {
+                    const matchWidth = width.match(/^(\d+)(?:px)?$/);
+                    if (matchWidth) {
+                      updateOrAddMdxAttribute(attributes, "width", Number(matchWidth[1]));
+                    } else {
+                      updateOrAddMdxAttribute(attributes, "style", `width:${width};`);
+                    }
+                  }
+
+                  if (height) {
+                    const matchHeight = height.match(/^(\d+)(?:px)?$/);
+                    if (matchHeight) {
+                      updateOrAddMdxAttribute(attributes, "height", Number(matchHeight[1]));
+                    } else {
+                      updateOrAddMdxAttribute(attributes, "style", `height:${height};`);
+                    }
+                  }
+                } else {
+                  updateOrAddMdxAttribute(attributes, attr, null);
+                  // updateOrAddMdxAttribute(attributes, attr, {
+                  //   type: "mdxJsxAttributeValueExpression",
+                  //   value: "true",
+                  //   data: {
+                  //     estree: {
+                  //       type: "Program",
+                  //       body: [
+                  //         {
+                  //           type: "ExpressionStatement",
+                  //           expression: {
+                  //             type: "Literal",
+                  //             value: true,
+                  //             raw: "true",
+                  //           },
+                  //         },
+                  //       ],
+                  //       sourceType: "module",
+                  //     },
+                  //   },
+                  // });
+                }
+              });
+              console.log({ before: node.attributes, after: attributes });
+              node.attributes = structuredClone(attributes);
+              console.log(node.attributes);
+            }
+          }
         }
 
         // The part for adding autolink ***********************************
@@ -710,6 +1042,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       },
     );
+
+    // console.dir(tree, { depth: 8 });
   };
 };
 
