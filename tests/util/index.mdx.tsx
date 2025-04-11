@@ -23,6 +23,7 @@ export const processMdx = async (
     },
     components: {
       Image: (props) => <img {...props} />,
+      Video: (props) => <video {...props} />,
     },
   });
 
@@ -34,7 +35,7 @@ export const processMdxRaw = async (
   format: "md" | "mdx",
   options?: ImageHackOptions,
 ) => {
-  const { content } = await evaluate({
+  const { content, error } = await evaluate({
     source: input,
     options: {
       mdxOptions: {
@@ -44,8 +45,11 @@ export const processMdxRaw = async (
     },
     components: {
       Image: (props) => <img {...props} />,
+      Video: (props) => <video {...props} />,
     },
   });
+
+  if (error) console.log({ error });
 
   return ReactDOMServer.renderToStaticMarkup(content);
 };
