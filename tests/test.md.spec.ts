@@ -43,7 +43,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO preserve the end of lines, delete whitespace
   // ******************************************
   it("handle basic paragraph that consists of images to be transformed to videos/audio", async () => {
     const input = dedent`
@@ -263,7 +262,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO handle end of line just after audio and video
   // ******************************************
   it("handle transformation to videos/audio, in th middle", async () => {
     const input = dedent`
@@ -298,7 +296,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO handle eof after figure
   // ******************************************
   it("handle adding caption, in the middle", async () => {
     const input = dedent`
@@ -540,7 +537,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO handle spaces
   // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
@@ -858,7 +854,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     );
   });
 
-  // TODO delete the last whitespaces in previous paragraph while splitting, and put eol before paragraph
   // ******************************************
   it("does NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
@@ -1040,7 +1035,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO look at carefully, delete whitespaces last one
   // ******************************************
   it("example in the README", async () => {
     const input = dedent`
