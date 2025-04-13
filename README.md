@@ -471,7 +471,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 - [`rehype-code-meta`](https://www.npmjs.com/package/rehype-code-meta)
   – Rehype plugin to copy `code.data.meta` to `code.properties.metastring`
 - [`rehype-image-hack`](https://www.npmjs.com/package/rehype-image-hack)
-  – Rehype plugin to enhance Markdown image syntax and MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, parsing directives in title for styling and attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.
+  – Rehype plugin to enhance Markdown image syntax and MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.
 
 ### My Recma Plugins
 
@@ -487,6 +487,8 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
   – Recma plugin to ensure getting `React` instance from the arguments and to make the runtime props `{React, jsx, jsxs, jsxDev, Fragment}` is available in the dynamically imported components in the compiled source of MDX.
 - [`recma-mdx-html-override`](https://www.npmjs.com/package/recma-mdx-html-override)
   – Recma plugin to allow selected raw HTML elements to be overridden via MDX components.
+- [`recma-mdx-interpolate`](https://www.npmjs.com/package/recma-mdx-interpolate)
+  – Recma plugin to interpolate identifiers wrapped in curly braces in the alt/src/title of a link/image in MDX.
 
 ## License
 
