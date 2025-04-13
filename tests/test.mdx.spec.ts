@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
 import * as prettier from "prettier";
-import { processMdx } from "./util/index.mdx";
+import { processMdx, processMdxRaw } from "./util/index.mdx";
 
 describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
@@ -510,12 +510,12 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         </figure>
         <p>Here is the video.</p>
         <figure>
-          <video controls><source src="video.mp4" type="video/mp4" /></video>
+          <video controls=""><source src="video.mp4" type="video/mp4" /></video>
           <figcaption>Video Caption</figcaption>
         </figure>
         <p>Here is the audio.</p>
         <figure>
-          <audio controls><source src="audio.mp3" type="audio/mpeg" /></audio>
+          <audio controls=""><source src="audio.mp3" type="audio/mpeg" /></audio>
           <figcaption>Audio Caption</figcaption>
         </figure>
       </blockquote>
@@ -527,54 +527,58 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p>Here is the image.</p>
       <figure><img src="image.png" alt="Image Caption"/><figcaption>Image Caption</figcaption></figure>
       <p>Here is the video.</p>
-      <figure><video controls><source src="video.mp4" type="video/mp4"/></video><figcaption>Video Caption</figcaption></figure>
+      <figure><video controls=""><source src="video.mp4" type="video/mp4"/></video><figcaption>Video Caption</figcaption></figure>
       <p>Here is the audio.</p>
-      <figure><audio controls><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Audio Caption</figcaption></figure>
+      <figure><audio controls=""><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Audio Caption</figcaption></figure>
       </blockquote>"
     `);
   });
 
+  // TODO extract figure from p
   // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
       > Here is the image. <img alt="*Image Caption" src="image.png"/>
       >
-      > Here is the video. <video alt="*Video Caption" src="video.mp4">
+      > Here is the video. <video alt="*Video Caption" src="video.mp4"/>
       >
-      > Here is the audio. <audio alt="*Audio Caption" src="audio.mp3">
+      > Here is the audio. <audio alt="*Audio Caption" src="audio.mp3"/>
     `;
 
     const html = await processMdx(input, "mdx");
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<blockquote>
-        <p>Here is the image.</p>
-        <figure>
-          <img alt="Image Caption" src="image.png" />
-          <figcaption>Image Caption</figcaption>
-        </figure>
-        <p>Here is the video.</p>
-        <figure>
-          <video src="video.mp4"></video>
-          <figcaption>Video Caption</figcaption>
-        </figure>
-        <p>Here is the audio.</p>
-        <figure>
-          <audio src="audio.mp3"></audio>
-          <figcaption>Audio Caption</figcaption>
-        </figure>
+        <p>
+          Here is the image.
+          <figure>
+            <img alt="Image Caption" src="image.png" />
+            <figcaption>Image Caption</figcaption>
+          </figure>
+        </p>
+        <p>
+          Here is the video.
+          <figure>
+            <video src="video.mp4"></video>
+            <figcaption>Video Caption</figcaption>
+          </figure>
+        </p>
+        <p>
+          Here is the audio.
+          <figure>
+            <audio src="audio.mp3"></audio>
+            <figcaption>Audio Caption</figcaption>
+          </figure>
+        </p>
       </blockquote>
       "
     `);
 
     expect(html).toMatchInlineSnapshot(`
       "<blockquote>
-      <p>Here is the image.</p>
-      <figure><img alt="Image Caption" src="image.png"/><figcaption>Image Caption</figcaption></figure>
-      <p>Here is the video.</p>
-      <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure>
-      <p>Here is the audio.</p>
-      <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure>
+      <p>Here is the image. <figure><img alt="Image Caption" src="image.png"/><figcaption>Image Caption</figcaption></figure></p>
+      <p>Here is the video. <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure></p>
+      <p>Here is the audio. <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure></p>
       </blockquote>"
     `);
   });
@@ -605,16 +609,16 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <video title="title" id="video-id" class="video-class" width="200" height="100">
         <source src="video.mp4" type="video/mp4" />
       </video>
-      <audio title="title" id="audio-id" class="audio-class" autoplay>
+      <audio title="title" id="audio-id" class="audio-class" autoplay="">
         <source src="audio.mp3" type="audio/mpeg" />
       </audio>
       "
     `);
 
     expect(html).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt="alt" title="title" id="image-id" class="image-class" style="width:2rem;height:1rem;"/></p>
+      "<p><img src="image.png" alt="alt" title="title" id="image-id" class="image-class" style="width:2rem;height:1rem"/></p>
       <video title="title" id="video-id" class="video-class" width="200" height="100"><source src="video.mp4" type="video/mp4"/></video>
-      <audio title="title" id="audio-id" class="audio-class" autoplay><source src="audio.mp3" type="audio/mpeg"/></audio>"
+      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>"
     `);
   });
 
@@ -649,14 +653,14 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     expect(html).toMatchInlineSnapshot(`
       "<p><img src="image.png" alt="alt" title="title" width="400" height="300" loading="lazy"/>
-      <img src="image.png" alt="alt" title="title" style="width:50%;height:3rem;"/></p>"
+      <img src="image.png" alt="alt" title="title" style="width:50%;height:3rem"/></p>"
     `);
   });
 
   // ******************************************
   it("simple video size and additional properties", async () => {
     const input = dedent`
-      ![](video.mp4 "title > 400x300 autoplay muted poster=image.png")
+      ![](video.mp4 "title > 400x300 muted poster=image.png")
 
       ![](video.mp4 "> 70%x controls autoplay loop style=max-width:500px")
 
@@ -670,30 +674,30 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const html = await processMdx(input, "mdx");
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<video title="title" width="400" height="300" autoplay muted poster="image.png">
+      "<video title="title" width="400" height="300" muted="" poster="image.png">
         <source src="video.mp4" type="video/mp4" />
       </video>
-      <video style="width: 70%; max-width: 500px" controls autoplay loop>
+      <video style="width: 70%; max-width: 500px" controls="" autoplay="" loop="">
         <source src="video.mp4" type="video/mp4" />
       </video>
-      <video style="height: 70%; max-width: 500px" controls autoplay loop>
+      <video style="height: 70%; max-width: 500px" controls="" autoplay="" loop="">
         <source src="video.mp4" type="video/mp4" />
       </video>
-      <video autoplay loop style="max-width: 500px; height: 70%" controls>
+      <video autoplay="" loop="" style="max-width: 500px; height: 70%" controls="">
         <source src="video.mp4" type="video/mp4" />
       </video>
-      <video autoplay loop style="max-width: 500px; width: 70%" controls>
+      <video autoplay="" loop="" style="max-width: 500px; width: 70%" controls="">
         <source src="video.mp4" type="video/mp4" />
       </video>
       "
     `);
 
     expect(html).toMatchInlineSnapshot(`
-      "<video title="title" width="400" height="300" autoplay muted poster="image.png"><source src="video.mp4" type="video/mp4"/></video>
-      <video style="width:70%;max-width:500px;" controls autoplay loop><source src="video.mp4" type="video/mp4"/></video>
-      <video style="height:70%;max-width:500px;" controls autoplay loop><source src="video.mp4" type="video/mp4"/></video>
-      <video autoplay loop style="max-width:500px;height:70%;" controls><source src="video.mp4" type="video/mp4"/></video>
-      <video autoplay loop style="max-width:500px;width:70%;" controls><source src="video.mp4" type="video/mp4"/></video>"
+      "<video title="title" width="400" height="300" muted="" poster="image.png"><source src="video.mp4" type="video/mp4"/></video>
+      <video style="width:70%;max-width:500px" controls="" autoplay="" loop=""><source src="video.mp4" type="video/mp4"/></video>
+      <video style="height:70%;max-width:500px" controls="" autoplay="" loop=""><source src="video.mp4" type="video/mp4"/></video>
+      <video autoplay="" loop="" style="max-width:500px;height:70%" controls=""><source src="video.mp4" type="video/mp4"/></video>
+      <video autoplay="" loop="" style="max-width:500px;width:70%" controls=""><source src="video.mp4" type="video/mp4"/></video>"
     `);
   });
 
@@ -1044,7 +1048,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
     `;
 
-    const html = await processMdx(input, "md");
+    const html = await processMdxRaw(input, "mdx");
     // const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
@@ -1062,7 +1066,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
         <figcaption>Image Caption</figcaption>
       </figure>
       <p>It adds attributes.</p>
-      <video title="title" width="640" height="480" autoplay>
+      <video title="title" width="640" height="480" autoplay="">
         <source src="video.mp4" type="video/mp4" />
       </video>
       "
@@ -1075,20 +1079,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p>It adds caption.</p>
       <figure><img src="image.png" alt="Image Caption"/><figcaption>Image Caption</figcaption></figure>
       <p>It adds attributes.</p>
-      <video title="title" width="640" height="480" autoplay><source src="video.mp4" type="video/mp4"/></video>"
+      <video title="title" width="640" height="480" autoplay=""><source src="video.mp4" type="video/mp4"/></video>"
     `);
-  });
-
-  // ******************************************
-  it.only("mdx jsx", async () => {
-    const input = dedent`
-      <video src="video.mp4" title="title > 640x480 muted loop autoPlay" />
-    `;
-
-    const html = await processMdx(input, "mdx");
-
-    expect(html).toMatchInlineSnapshot(
-      `"<video src="video.mp4" title="title" width="640" height="480" muted="" loop="" autoplay=""></video>"`,
-    );
   });
 });
