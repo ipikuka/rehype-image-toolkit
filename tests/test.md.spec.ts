@@ -542,9 +542,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
       > Here is the image. <img alt="*Image Caption" src="image.png">
       >
-      > Here is the video. <video alt="*Video Caption" src="video.mp4">
+      > Here is the video. <video alt="*Video Caption" src="video.mp4"></video>
       >
-      > Here is the audio. <audio alt="*Audio Caption" src="audio.mp3">
+      > Here is the audio. <audio alt="*Audio Caption" src="audio.mp3"></audio>
     `;
 
     const html = String(await processMdRawFirst(input));
