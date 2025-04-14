@@ -1,4 +1,5 @@
 import type { Plugin } from "unified";
+import type { Program } from "estree";
 import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
@@ -152,22 +153,33 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     options,
   ) as PartiallyRequiredImageHackOptions;
 
-  const RE_LEADING_WHITESPACE = /^(\s*)/;
-  const RE_TRAILING_WHITESPACE = /(\s*)$/;
   const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
   const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
   const wwwRegex = /^www\./i; // www links
   const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
   const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
 
+  function ensureSemiColon(str: string) {
+    return str.endsWith(";") ? str : str + ";";
+  }
+
+  function appendStyle(
+    existing: string | number | boolean | (string | number)[] | null | undefined,
+    patch: string,
+  ): string {
+    const base = typeof existing === "string" ? ensureSemiColon(existing) : "";
+    return base + ensureSemiColon(patch);
+  }
+
   /**
    * Transform.
    */
   return (tree: Root): undefined => {
-    console.dir(tree, { depth: 12 });
+    // console.log before preperation
+    // console.dir(tree, { depth: 12 });
 
     /**
-     * visit for preparation
+     * preparation visit on Element
      *
      * remove the brackets/parentheses around the videos/audio sources since they will not be auto linked
      * mark the images as to be autolinked if there are brackets/parentheses around the source
@@ -250,8 +262,110 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * unravel image elements to be converted into video/audio or to be wrapped with figure in paragraphs
-     * unravel also video and audio elements parsed in a paragraph (it may happen while remark/rehype parsing)
+     * preparation visit on MdxJsxFlowElementHast and MdxJsxTextElementHast
+     *
+     * remove the brackets/parentheses around the videos/audio sources since they will not be auto linked
+     * mark the images as to be autolinked if there are brackets/parentheses around the source
+     * mark the images/videos/audio as to be wrapped in a figure and set the captions
+     * mark the images as to be converted into videos/audio based on the source extension
+     *
+     */
+    visit(
+      tree,
+      ["mdxJsxFlowElement", "mdxJsxTextElement"],
+      function (node, index, parent): VisitorResult {
+        /* v8 ignore next 3 */
+        if (!parent || index === undefined) return;
+
+        if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
+
+        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
+          return;
+        }
+
+        // Preparation part for adding autolink ***************************************
+
+        const isAnchorParent = parent.type === "mdxJsxFlowElement" && parent.name === "a";
+
+        const srcAttribute = node.attributes.find(
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
+        );
+
+        if (srcAttribute && typeof srcAttribute.value === "string") {
+          let src = srcAttribute.value;
+          const wrappers = [
+            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
+            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
+          ];
+
+          for (const { wrapper, raw, encoded } of wrappers) {
+            const isRaw = raw.test(src);
+            const isEncoded = !isRaw && encoded.test(src);
+
+            if (isRaw || isEncoded) {
+              const sliceAmount = isRaw ? 1 : 3;
+              src = src.slice(sliceAmount, -sliceAmount);
+              srcAttribute.value = src;
+
+              const isValidAutolink =
+                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+                rootRelativeRegex.test(src) ||
+                wwwRegex.test(src) ||
+                fileLinkRegex.test(src);
+
+              if (node.name === "img" && !isAnchorParent && isValidAutolink) {
+                node.data ??= {};
+                node.data.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
+                break; // stop after the first match
+              }
+            }
+          }
+        }
+
+        // Preparation part for adding figure and caption *****************************
+
+        const altAttribute = node.attributes.find(
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
+        );
+
+        if (altAttribute && typeof altAttribute.value === "string") {
+          const alt = altAttribute.value;
+          const startsWith = {
+            plus: alt.startsWith("+"),
+            star: alt.startsWith("*"),
+            caption: alt.startsWith("caption:"),
+          };
+
+          if (startsWith.plus || startsWith.star || startsWith.caption) {
+            node.data ??= {};
+            node.data.markedAsToBeInFigure = true;
+
+            const figcaptionText =
+              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+
+            node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+            altAttribute.value = node.name === "img" ? figcaptionText : undefined;
+          }
+        }
+
+        // Preparation part for convertion to video/audio ****************************
+        if (srcAttribute && typeof srcAttribute.value === "string") {
+          const extension = getExtension(srcAttribute.value);
+          const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+          if (needsConversion && node.name === "img") {
+            node.data ??= {};
+            node.data.markedAsToBeConverted = true;
+            node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+          }
+        }
+      },
+    );
+
+    /**
+     * unravel images to be converted into videos/audio or to be wrapped with figure in paragraphs
+     * unravel also videos/audio wrapped with a paragraph (it may happen while remark/rehype parsing)
+     *
+     * visit <p> elements looking Element, MdxJsxFlowElement and MdxJsxTextElement
      *
      * Mutates `children` of paragraph nodes.
      */
@@ -262,7 +376,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       let currentParagraph: Element = createEmptyParagraph();
 
       for (const element of node.children) {
-        if (isRelevant(element)) {
+        if (isRelevantElement(element) || isRelevantMdxJsxElement(element)) {
           flushParagraph();
           newNodes.push(element);
         } else {
@@ -320,20 +434,20 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      function isRelevant(element: ElementContent) {
+      function isRelevantElement(element: ElementContent) {
         if (element.type !== "element") return false;
 
         const isVideo = element.tagName === "video";
         const isAudio = element.tagName === "audio";
 
-        const isRelevantImage = element.tagName === "img" && isMarked(element);
+        const isRelevantImage = element.tagName === "img" && isMarkedElement(element);
 
         const isRelevantAnchor =
           element.tagName === "a" &&
           element.children.some((child) => {
             return (
               child.type === "element" &&
-              ((child.tagName === "img" && isMarked(child)) ||
+              ((child.tagName === "img" && isMarkedElement(child)) ||
                 child.tagName === "video" ||
                 child.tagName === "audio")
             );
@@ -342,14 +456,48 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
       }
 
-      function isMarked(el: ElementContent | undefined | null) {
+      function isMarkedElement(el: ElementContent | undefined | null) {
         /* v8 ignore next */
         if (!el || !("properties" in el)) return false;
         return el.properties.markedAsToBeInFigure || el.properties.markedAsToBeConverted;
       }
+
+      function isRelevantMdxJsxElement(element: ElementContent) {
+        if (element.type !== "mdxJsxFlowElement" && element.type !== "mdxJsxTextElement")
+          return false;
+
+        const isVideo = element.name === "video";
+        const isAudio = element.name === "audio";
+
+        const isRelevantImage = element.name === "img" && isMarkedMdxJsxElement(element);
+
+        const isRelevantAnchor =
+          element.name === "a" &&
+          element.children.some((child) => {
+            return (
+              (child.type === "mdxJsxFlowElement" || child.type === "mdxJsxTextElement") &&
+              ((child.name === "img" && isMarkedMdxJsxElement(child)) ||
+                child.name === "video" ||
+                child.name === "audio")
+            );
+          });
+
+        return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
+      }
+
+      function isMarkedMdxJsxElement(el: ElementContent | undefined | null) {
+        /* v8 ignore next */
+        if (!el || !("attributes" in el)) return false;
+        return el.data?.markedAsToBeInFigure || el.data?.markedAsToBeConverted;
+      }
     });
 
+    // console.log before application; after preperation
+    // console.dir(tree, { depth: 8 });
+
     /**
+     * application visit on Element
+     *
      * wrap marked images/videos/audio with <figure> element and add caption
      * convert marked images into to <video> / <audio> elements
      * add additional properties into assets utilizing the title attribute
@@ -463,35 +611,29 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               if (match) {
                 node.properties[key] = Number(match[1]);
               } else {
-                node.properties.style = (node.properties.style || "") + `${key}:${value};`;
+                node.properties.style = appendStyle(node.properties.style, `${key}:${value}`);
               }
             } else if (key === "style") {
-              node.properties.style = (node.properties.style || "") + `${value};`;
+              node.properties.style = appendStyle(node.properties.style, value);
             } else {
               node.properties[key] = value;
             }
           } else if (attr.includes("x")) {
             const [width, height] = attr.split("x");
 
-            if (width) {
-              const matchWidth = width.match(/^(\d+)(?:px)?$/);
-              if (matchWidth) {
-                node.properties["width"] = Number(matchWidth[1]);
-              } else {
-                node.properties.style = (node.properties.style || "") + `width:${width};`;
-              }
-            }
+            [width, height].forEach((value, i) => {
+              if (!value) return;
 
-            if (height) {
-              const matchHeight = height.match(/^(\d+)(?:px)?$/);
-              if (matchHeight) {
-                node.properties["height"] = Number(matchHeight[1]);
+              const key = i === 0 ? "width" : "height";
+              const match = value.match(/^(\d+)(?:px)?$/);
+              if (match) {
+                node.properties[key] = Number(match[1]);
               } else {
-                node.properties.style = (node.properties.style || "") + `height:${height};`;
+                node.properties.style = appendStyle(node.properties.style, `${key}:${value}`);
               }
-            }
+            });
           } else {
-            node.properties[attr] = "x";
+            node.properties[attr] = true;
           }
         });
       }
@@ -541,106 +683,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
     });
 
-    visit(
-      tree,
-      ["mdxJsxFlowElement", "mdxJsxTextElement"],
-      function (node, index, parent): VisitorResult {
-        /* v8 ignore next 3 */
-        if (!parent || index === undefined) return;
-
-        if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
-
-        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
-          return;
-        }
-
-        // Preparation part for adding autolink ***************************************
-
-        const isAnchorParent = parent.type === "mdxJsxFlowElement" && parent.name === "a";
-
-        const srcAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
-        );
-
-        if (srcAttribute && typeof srcAttribute.value === "string") {
-          let src = srcAttribute.value;
-          const wrappers = [
-            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
-            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
-          ];
-
-          for (const { wrapper, raw, encoded } of wrappers) {
-            const isRaw = raw.test(src);
-            const isEncoded = !isRaw && encoded.test(src);
-
-            if (isRaw || isEncoded) {
-              const sliceAmount = isRaw ? 1 : 3;
-              src = src.slice(sliceAmount, -sliceAmount);
-              srcAttribute.value = src;
-
-              const isValidAutolink =
-                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
-                rootRelativeRegex.test(src) ||
-                wwwRegex.test(src) ||
-                fileLinkRegex.test(src);
-
-              if (node.name === "img" && !isAnchorParent && isValidAutolink) {
-                node.data ??= {};
-                node.data.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
-                break; // stop after the first match
-              }
-            }
-          }
-        }
-
-        // Preparation part for adding figure and caption *****************************
-
-        const altAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
-        );
-
-        if (altAttribute && typeof altAttribute.value === "string") {
-          const alt = altAttribute.value;
-          const startsWith = {
-            plus: alt.startsWith("+"),
-            star: alt.startsWith("*"),
-            caption: alt.startsWith("caption:"),
-          };
-
-          if (startsWith.plus || startsWith.star || startsWith.caption) {
-            node.data ??= {};
-            node.data.markedAsToBeInFigure = true;
-
-            const figcaptionText =
-              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
-
-            node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
-            altAttribute.value = node.name === "img" ? figcaptionText : undefined;
-          }
-        }
-
-        // Preparation part for convertion to video/audio ****************************
-        if (srcAttribute && typeof srcAttribute.value === "string") {
-          const extension = getExtension(srcAttribute.value);
-          const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
-          if (needsConversion && node.name === "img") {
-            node.data ??= {};
-            node.data.markedAsToBeConverted = true;
-            node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
-          }
-        }
-      },
-    );
-
-    console.dir(tree, { depth: 8 });
-
     function updateOrAddMdxAttribute(
       attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
       name: string,
       value: MdxJsxAttributeValueExpression | string | number | boolean | null | undefined,
     ): void {
       const existing = attributes.find(
-        (attr) => attr.type === "mdxJsxAttribute" && attr.name === name,
+        (attr): attr is MdxJsxAttribute =>
+          attr.type === "mdxJsxAttribute" && attr.name === name,
       );
 
       if (value === undefined) {
@@ -649,7 +699,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      if (value === null || value === true) {
+      if (value === null) {
         if (existing) {
           existing.value = null;
         } else {
@@ -661,46 +711,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // Normalize value into a usable form
       const isExpression = typeof value === "object";
-      const newValueStr = isExpression ? value.value : String(value);
 
       if (existing) {
         if (name === "class") {
-          const current =
-            typeof existing.value === "string"
-              ? existing.value
-              : existing.value != null
-                ? existing.value.value
-                : existing.value;
-
+          const current = typeof existing.value === "string" ? existing.value : undefined;
           const currentClasses = new Set(current?.split(/\s+/).filter(Boolean));
-          currentClasses.add(newValueStr);
+          if (typeof value === "string") currentClasses.add(value);
           const merged = Array.from(currentClasses).join(" ");
-
-          // Keep it a string unless it was originally an expression
-          existing.value =
-            typeof existing.value === "string"
-              ? merged
-              : {
-                  type: "mdxJsxAttributeValueExpression",
-                  value: JSON.stringify(merged),
-                };
+          existing.value = typeof value === "object" ? value : merged;
         } else if (name === "style") {
-          const current =
-            typeof existing.value === "string"
-              ? existing.value
-              : existing.value != null
-                ? existing.value.value
-                : existing.value;
-
-          const appended =
-            current == null ? newValueStr : current + current.endsWith(";") ? "" : ";";
-
-          existing.value =
-            typeof existing.value === "string"
-              ? appended
-              : { type: "mdxJsxAttributeValueExpression", value: JSON.stringify(appended) };
+          const current = typeof existing.value === "string" ? existing.value : "";
+          if (typeof value === "string") {
+            existing.value = ensureSemiColon(current) + ensureSemiColon(value);
+          } else if (typeof value === "object") {
+            existing.value = value;
+          }
         } else {
-          existing.value = String(value);
+          existing.value = isExpression ? value : String(value);
         }
       } else {
         attributes.push({
@@ -711,63 +738,47 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
     }
 
-    // function getAttributeValue(
-    //   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
-    //   name: string,
-    // ): string | undefined {
-    //   for (const attr of attributes) {
-    //     if (
-    //       attr.type === "mdxJsxAttribute" &&
-    //       attr.name === name &&
-    //       typeof attr.value === "string"
-    //     ) {
-    //       return attr.value;
-    //     }
-    //   }
-
-    //   return undefined;
-    // }
-    // function getAttribute(
-    //   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
-    //   name: string,
-    // ): MdxJsxAttribute | undefined {
-    //   for (const attr of attributes) {
-    //     if (attr.type === "mdxJsxAttribute" && attr.name === name) {
-    //       return attr;
-    //     }
-    //   }
-
-    //   return undefined;
-    // }
-
-    function program(body: any[]): any {
+    function program(body: Program["body"]): Program {
       return {
-        estree: {
-          type: "Program",
-          body: body,
-          sourceType: "module",
-          comments: [],
+        type: "Program",
+        body: body,
+        sourceType: "module",
+        comments: [],
+      };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    function composeAttributeValueExpressionLiteral(
+      value: string | number | boolean,
+    ): MdxJsxAttributeValueExpression {
+      return {
+        type: "mdxJsxAttributeValueExpression",
+        value: JSON.stringify(value),
+        data: {
+          estree: program([
+            {
+              type: "ExpressionStatement",
+              expression: {
+                type: "Literal",
+                value: value,
+                raw: JSON.stringify(value),
+              },
+            },
+          ]),
         },
       };
     }
 
-    function getLiteralAttribute(value: string): any {
-      return {
-        type: "mdxJsxAttributeValueExpression",
-        value: "",
-        data: program([
-          {
-            type: "ExpressionStatement",
-            expression: {
-              type: "Literal",
-              value: value,
-              raw: JSON.stringify(value),
-            },
-          },
-        ]),
-      };
-    }
-
+    /**
+     * application visit on on MdxJsxFlowElementHast and MdxJsxTextElementHast
+     *
+     * wrap marked images/videos/audio with <figure> element and add caption
+     * convert marked images into to <video> / <audio> elements
+     * add additional properties into assets utilizing the title attribute
+     * add autolink for marked images
+     *
+     * Mutates `children` of paragraph nodes.
+     */
     visit(
       tree,
       ["mdxJsxFlowElement", "mdxJsxTextElement"],
@@ -899,6 +910,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             const attrs = directives.trim().split(" ").filter(Boolean);
             if (attrs.length) {
               const attributes = structuredClone(node.attributes);
+              console.dir({ before: attributes }, { depth: 12 });
 
               attrs.forEach((attr) => {
                 if (attr.startsWith("#")) {
@@ -912,10 +924,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (match) {
                       updateOrAddMdxAttribute(attributes, key, Number(match[1]));
                     } else {
-                      updateOrAddMdxAttribute(attributes, "style", `${key}:${value};`);
+                      // updateOrAddMdxAttribute(attributes, "style", `${key}:${value};`);
                     }
                   } else if (key === "style") {
-                    updateOrAddMdxAttribute(attributes, "style", `${value};`);
+                    // updateOrAddMdxAttribute(attributes, "style", `${value};`);
                   } else {
                     updateOrAddMdxAttribute(attributes, key, value);
                   }
@@ -928,7 +940,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (matchWidth) {
                       updateOrAddMdxAttribute(attributes, "width", Number(matchWidth[1]));
                     } else {
-                      updateOrAddMdxAttribute(attributes, "style", `width:${width};`);
+                      // updateOrAddMdxAttribute(attributes, "style", `width:${width};`);
                     }
                   }
 
@@ -937,36 +949,21 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (matchHeight) {
                       updateOrAddMdxAttribute(attributes, "height", Number(matchHeight[1]));
                     } else {
-                      updateOrAddMdxAttribute(attributes, "style", `height:${height};`);
+                      // updateOrAddMdxAttribute(attributes, "style", `height:${height};`);
                     }
                   }
                 } else {
-                  updateOrAddMdxAttribute(attributes, attr, null);
-                  // updateOrAddMdxAttribute(attributes, attr, {
-                  //   type: "mdxJsxAttributeValueExpression",
-                  //   value: "true",
-                  //   data: {
-                  //     estree: {
-                  //       type: "Program",
-                  //       body: [
-                  //         {
-                  //           type: "ExpressionStatement",
-                  //           expression: {
-                  //             type: "Literal",
-                  //             value: true,
-                  //             raw: "true",
-                  //           },
-                  //         },
-                  //       ],
-                  //       sourceType: "module",
-                  //     },
-                  //   },
-                  // });
+                  // updateOrAddMdxAttribute(attributes, attr, null);
+                  updateOrAddMdxAttribute(
+                    attributes,
+                    attr,
+                    composeAttributeValueExpressionLiteral(true),
+                  );
                 }
               });
-              console.log({ before: node.attributes, after: attributes });
+
+              console.dir({ after: attributes }, { depth: 12 });
               node.attributes = structuredClone(attributes);
-              console.log(node.attributes);
             }
           }
         }
@@ -1043,8 +1040,89 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       },
     );
 
+    // console.log after application
     // console.dir(tree, { depth: 8 });
   };
 };
 
 export default plugin;
+// const xy = {
+//   type: "mdxJsxAttributeValueExpression",
+//   value: "",
+//   data: {
+//     estree: {
+//       type: "Program",
+//       sourceType: "module",
+//       body: [{ type: "ExpressionStatement", expression: valueToEstree(styleToObject(value)) }],
+//     },
+//   },
+// };
+// import { valueToEstree } from "estree-util-value-to-estree";
+// import styleToObject from "style-to-js";
+
+// const x = {
+//   type: "mdxJsxAttribute",
+//   name: "style",
+//   value: {
+//     type: "mdxJsxAttributeValueExpression",
+//     value: '{backgroundColor: "red", padding: 5 + "px"}',
+//     data: {
+//       estree: {
+//         type: "Program",
+//         body: [
+//           {
+//             type: "ExpressionStatement",
+//             expression: {
+//               type: "ObjectExpression",
+//               properties: [
+//                 {
+//                   type: "Property",
+//                   method: false,
+//                   shorthand: false,
+//                   computed: false,
+//                   key: {
+//                     type: "Identifier",
+//                     name: "backgroundColor",
+//                   },
+//                   value: {
+//                     type: "Literal",
+//                     value: "red",
+//                     raw: '"red"',
+//                   },
+//                   kind: "init",
+//                 },
+//                 {
+//                   type: "Property",
+//                   method: false,
+//                   shorthand: false,
+//                   computed: false,
+//                   key: {
+//                     type: "Identifier",
+//                     name: "padding",
+//                   },
+//                   value: {
+//                     type: "BinaryExpression",
+//                     left: {
+//                       type: "Literal",
+//                       value: 5,
+//                       raw: "5",
+//                     },
+//                     operator: "+",
+//                     right: {
+//                       type: "Literal",
+//                       value: "px",
+//                       raw: '"px"',
+//                     },
+//                   },
+//                   kind: "init",
+//                 },
+//               ],
+//             },
+//           },
+//         ],
+//         sourceType: "module",
+//         comments: [],
+//       },
+//     },
+//   },
+// };
