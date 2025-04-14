@@ -534,7 +534,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO extract figure from p
   // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
@@ -549,36 +548,33 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<blockquote>
-        <p>
-          Here is the image.
-          <figure>
-            <img alt="Image Caption" src="image.png" />
-            <figcaption>Image Caption</figcaption>
-          </figure>
-        </p>
-        <p>
-          Here is the video.
-          <figure>
-            <video src="video.mp4"></video>
-            <figcaption>Video Caption</figcaption>
-          </figure>
-        </p>
-        <p>
-          Here is the audio.
-          <figure>
-            <audio src="audio.mp3"></audio>
-            <figcaption>Audio Caption</figcaption>
-          </figure>
-        </p>
+        <p>Here is the image.</p>
+        <figure>
+          <img alt="Image Caption" src="image.png" />
+          <figcaption>Image Caption</figcaption>
+        </figure>
+        <p>Here is the video.</p>
+        <figure>
+          <video src="video.mp4"></video>
+          <figcaption>Video Caption</figcaption>
+        </figure>
+        <p>Here is the audio.</p>
+        <figure>
+          <audio src="audio.mp3"></audio>
+          <figcaption>Audio Caption</figcaption>
+        </figure>
       </blockquote>
       "
     `);
 
     expect(html).toMatchInlineSnapshot(`
       "<blockquote>
-      <p>Here is the image. <figure><img alt="Image Caption" src="image.png"/><figcaption>Image Caption</figcaption></figure></p>
-      <p>Here is the video. <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure></p>
-      <p>Here is the audio. <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure></p>
+      <p>Here is the image.</p>
+      <figure><img alt="Image Caption" src="image.png"/><figcaption>Image Caption</figcaption></figure>
+      <p>Here is the video.</p>
+      <figure><video src="video.mp4"></video><figcaption>Video Caption</figcaption></figure>
+      <p>Here is the audio.</p>
+      <figure><audio src="audio.mp3"></audio><figcaption>Audio Caption</figcaption></figure>
       </blockquote>"
     `);
   });
