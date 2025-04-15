@@ -209,7 +209,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO fix the error The `style` prop expects a mapping from style properties to values, not a string. For example, style={{marginRight: spacing + 'em'}} when using JSX
   // TODO handle name casing like autoplay autoPlay
   // ******************************************
   it("MDX source, handle adding attributes utilizing title attribute", async () => {

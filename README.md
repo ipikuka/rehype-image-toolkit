@@ -353,7 +353,7 @@ If you want just a regular inline image, do not use any `caption:` or `*` or `+`
 
 ## Summary table of directives
 
-// TODO
+*to be created soon.*
 
 ## Options
 
