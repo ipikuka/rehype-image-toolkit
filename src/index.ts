@@ -738,7 +738,18 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               ? ensureSemiColon(existing.value) + ensureSemiColon(value)
               : ensureSemiColon(value);
           } else if (typeof existing.value === "object" && typeof value === "object") {
-            console.log({ existing: existing.value, patched: value });
+            const expressionStatementExisting = existing.value?.data?.estree?.body[0];
+            const expressionStatementPatch = value.data?.estree?.body[0];
+            if (
+              expressionStatementExisting?.type === "ExpressionStatement" &&
+              expressionStatementPatch?.type === "ExpressionStatement" &&
+              expressionStatementExisting.expression.type === "ObjectExpression" &&
+              expressionStatementPatch.expression.type === "ObjectExpression"
+            ) {
+              expressionStatementExisting.expression.properties.push(
+                ...expressionStatementPatch.expression.properties,
+              );
+            }
           }
         } else {
           existing.value = isExpression ? value : String(value);
@@ -954,7 +965,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (match) {
                       updateOrAddMdxAttribute(attributes, key, Number(match[1]));
                     } else {
-                      // updateOrAddMdxAttribute(attributes, "style", `${key}:${value};`);
+                      updateOrAddMdxAttribute(
+                        attributes,
+                        "style",
+                        composeAttributeValueExpressionStyle(`${key}:${value}`),
+                      );
                     }
                   } else if (key === "style") {
                     updateOrAddMdxAttribute(
@@ -974,7 +989,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (matchWidth) {
                       updateOrAddMdxAttribute(attributes, "width", Number(matchWidth[1]));
                     } else {
-                      // updateOrAddMdxAttribute(attributes, "style", `width:${width};`);
+                      updateOrAddMdxAttribute(
+                        attributes,
+                        "style",
+                        composeAttributeValueExpressionStyle(`width:${width}`),
+                      );
                     }
                   }
 
@@ -983,7 +1002,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     if (matchHeight) {
                       updateOrAddMdxAttribute(attributes, "height", Number(matchHeight[1]));
                     } else {
-                      // updateOrAddMdxAttribute(attributes, "style", `height:${height};`);
+                      updateOrAddMdxAttribute(
+                        attributes,
+                        "style",
+                        composeAttributeValueExpressionStyle(`height:${height}`),
+                      );
                     }
                   }
                 } else {
