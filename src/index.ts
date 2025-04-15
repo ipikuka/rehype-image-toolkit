@@ -732,7 +732,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const merged = join(Array.from(currentClasses));
           existing.value = typeof value === "object" ? value : merged;
         } else if (name === "style") {
-          const current = typeof existing.value === "string" ? existing.value : "";
           if (typeof existing.value === "string" && typeof value === "string") {
             existing.value = existing.value
               ? ensureSemiColon(existing.value) + ensureSemiColon(value)
