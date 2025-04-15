@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
-// import * as prettier from "prettier";
+import * as prettier from "prettier";
 
 import { processMdx, processMdxRaw } from "./util/index.mdx";
 
@@ -215,45 +215,120 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   it("MDX source, handle adding attributes utilizing title attribute", async () => {
     const input = dedent`
       ![](image.png "title > width=2rem height=1rem")
-
       <img src="image.png" alt="" title="title > width=2rem height=1rem" />
 
-      ![](image.png "title > 400x300 loading=lazy")
-
-      <img src="image.png" alt="" title="title > 400x300 loading=lazy" />
+      ![](image.png "> 400x300 loading=lazy")
+      <img src="image.png" alt="" title="> 400x300 loading=lazy" />
 
       ![](image.png "title > 50%x3rem")
-
       <img src="image.png" alt="" title="title > 50%x3rem" />
 
       ![](video.mp4 "title > width=200 height=100 muted")
-
       <img src="video.mp4" alt="" title="title > width=200 height=100 muted" />
-      <video src="video.mp4" alt="" title="title > width=200 height=100 muted" />
+      <video src="video.mp4" alt="" title="title > width=200 height=100 muted"></video>
 
       ![](audio.mp3 "title > #audio-id .audio-class autoplay")
-
       <img src="audio.mp3" alt="" title="title > #audio-id .audio-class autoPlay" />
-      <audio src="audio.mp3" alt="" title="title > #audio-id .audio-class autoPlay" />
-
-
+      <audio src="audio.mp3" alt="" title="title > #audio-id .audio-class autoPlay"></audio>
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/></p>
-      <img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/>
-      <p><img src="image.png" alt="" title="title" width="400" height="300" loading="lazy"/></p>
-      <img src="image.png" alt="" title="title" width="400" height="300" loading="lazy"/>
-      <p><img src="image.png" alt="" title="title" style="width:50%;height:3rem"/></p>
-      <img src="image.png" alt="" title="title" style="width:50%;height:3rem"/>
-      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
-      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
-      <video src="video.mp4" alt="" title="title" width="200" height="100" muted="">
-      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
-      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
-      <audio src="audio.mp3" alt="" title="title" id="audio-id" class="audio-class" autoplay=""></audio></video>"
+    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
+      .toMatchInlineSnapshot(`
+      "<p>
+        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
+        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
+      </p>
+      <p>
+        <img src="image.png" alt="" width="400" height="300" loading="lazy" />
+        <img src="image.png" alt="" width="400" height="300" loading="lazy" />
+      </p>
+      <p>
+        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
+        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
+      </p>
+      <video title="title" width="200" height="100" muted="">
+        <source src="video.mp4" type="video/mp4" />
+      </video>
+      <video title="title" width="200" height="100" muted="">
+        <source src="video.mp4" type="video/mp4" />
+      </video>
+      <video
+        src="video.mp4"
+        alt=""
+        title="title"
+        width="200"
+        height="100"
+        muted=""
+      ></video>
+      <audio title="title" id="audio-id" class="audio-class" autoplay="">
+        <source src="audio.mp3" type="audio/mpeg" />
+      </audio>
+      <audio title="title" id="audio-id" class="audio-class" autoplay="">
+        <source src="audio.mp3" type="audio/mpeg" />
+      </audio>
+      <audio
+        src="audio.mp3"
+        alt=""
+        title="title"
+        id="audio-id"
+        class="audio-class"
+        autoplay=""
+      ></audio>
+      "
     `);
 
-    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
+    expect(await prettier.format(await processMdx(input, "mdx"), { parser: "html" }))
+      .toMatchInlineSnapshot(`
+      "<p>
+        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
+      </p>
+      <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
+      <p><img src="image.png" alt="" width="400" height="300" loading="lazy" /></p>
+      <img src="image.png" alt="" width="400" height="300" loading="lazy" />
+      <p>
+        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
+      </p>
+      <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
+      <video title="title" width="200" height="100" muted="">
+        <source src="video.mp4" type="video/mp4" />
+      </video>
+      <video title="title" width="200" height="100" muted="">
+        <source src="video.mp4" type="video/mp4" />
+      </video>
+      <video
+        src="video.mp4"
+        alt=""
+        title="title"
+        width="200"
+        height="100"
+        muted=""
+      ></video>
+      <audio title="title" id="audio-id" class="audio-class" autoplay="">
+        <source src="audio.mp3" type="audio/mpeg" />
+      </audio>
+      <audio title="title" id="audio-id" class="audio-class" autoplay="">
+        <source src="audio.mp3" type="audio/mpeg" />
+      </audio>
+      <audio
+        src="audio.mp3"
+        alt=""
+        title="title"
+        id="audio-id"
+        class="audio-class"
+        autoplay=""
+      ></audio>
+      "
+    `);
+  });
+
+  // ******************************************
+  it("MDX source, trial for MDX component for the style", async () => {
+    const input = dedent`
+      <img src="image.png" alt="" hidden={true} style={{backgroundColor: "red", padding: 5 + "px"}} title="title > style=padding:10px~20px;border-bottom:2px~solid~red;" />
+    `;
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(
+      `"<img src="image.png" alt="" hidden="" style="background-color:red;padding:10px 20px;border-bottom:2px solid red" title="title"/>"`,
+    );
   });
 });
