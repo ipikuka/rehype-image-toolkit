@@ -721,8 +721,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      // Normalize value into a usable form
       const isExpression = typeof value === "object";
+      const newValue = isExpression ? value : String(value);
 
       if (existing) {
         if (name === "class") {
@@ -751,14 +751,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             }
           }
         } else {
-          existing.value = isExpression ? value : String(value);
+          existing.value = newValue;
         }
       } else {
-        attributes.push({
-          type: "mdxJsxAttribute",
-          name,
-          value: isExpression ? value : String(value),
-        });
+        attributes.push({ type: "mdxJsxAttribute", name, value: newValue });
       }
     }
 
@@ -936,8 +932,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "title",
         );
 
-        console.log({ titleAttribute: titleAttribute?.value });
-
         if (
           titleAttribute?.type === "mdxJsxAttribute" &&
           typeof titleAttribute.value === "string"
@@ -950,7 +944,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             const attrs = split(directives);
             if (attrs.length) {
               const attributes = structuredClone(node.attributes);
-              console.dir({ before: attributes }, { depth: 12 });
 
               attrs.forEach((attr) => {
                 if (attr.startsWith("#")) {
@@ -981,7 +974,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                   }
                 } else if (attr.includes("x")) {
                   const [width, height] = attr.split("x");
-                  console.log({ width, height });
 
                   if (width) {
                     const matchWidth = width.match(/^(\d+)(?:px)?$/);
@@ -1018,7 +1010,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 }
               });
 
-              console.dir({ after: attributes }, { depth: 12 });
               node.attributes = structuredClone(attributes);
             }
           }
@@ -1102,83 +1093,3 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 };
 
 export default plugin;
-// const xy = {
-//   type: "mdxJsxAttributeValueExpression",
-//   value: "",
-//   data: {
-//     estree: {
-//       type: "Program",
-//       sourceType: "module",
-//       body: [{ type: "ExpressionStatement", expression: valueToEstree(styleToObject(value)) }],
-//     },
-//   },
-// };
-// import { valueToEstree } from "estree-util-value-to-estree";
-// import styleToObject from "style-to-js";
-
-// const x = {
-//   type: "mdxJsxAttribute",
-//   name: "style",
-//   value: {
-//     type: "mdxJsxAttributeValueExpression",
-//     value: '{backgroundColor: "red", padding: 5 + "px"}',
-//     data: {
-//       estree: {
-//         type: "Program",
-//         body: [
-//           {
-//             type: "ExpressionStatement",
-//             expression: {
-//               type: "ObjectExpression",
-//               properties: [
-//                 {
-//                   type: "Property",
-//                   method: false,
-//                   shorthand: false,
-//                   computed: false,
-//                   key: {
-//                     type: "Identifier",
-//                     name: "backgroundColor",
-//                   },
-//                   value: {
-//                     type: "Literal",
-//                     value: "red",
-//                     raw: '"red"',
-//                   },
-//                   kind: "init",
-//                 },
-//                 {
-//                   type: "Property",
-//                   method: false,
-//                   shorthand: false,
-//                   computed: false,
-//                   key: {
-//                     type: "Identifier",
-//                     name: "padding",
-//                   },
-//                   value: {
-//                     type: "BinaryExpression",
-//                     left: {
-//                       type: "Literal",
-//                       value: 5,
-//                       raw: "5",
-//                     },
-//                     operator: "+",
-//                     right: {
-//                       type: "Literal",
-//                       value: "px",
-//                       raw: '"px"',
-//                     },
-//                   },
-//                   kind: "init",
-//                 },
-//               ],
-//             },
-//           },
-//         ],
-//         sourceType: "module",
-//         comments: [],
-//       },
-//     },
-//   },
-// };
