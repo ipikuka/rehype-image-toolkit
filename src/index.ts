@@ -4,6 +4,9 @@ import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
+import { parse as split, stringify as join } from "space-separated-tokens";
+import styleToObject from "style-to-js";
+import { valueToEstree } from "estree-util-value-to-estree";
 
 import type {
   MdxJsxAttribute,
@@ -158,6 +161,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   const wwwRegex = /^www\./i; // www links
   const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
   const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
+
+  function toObjectLiteral(obj: Record<string, unknown>): string {
+    return `{${Object.entries(obj)
+      .map(([key, value]) => `${key}:${JSON.stringify(value)}`)
+      .join(",")}}`;
+  }
 
   function ensureSemiColon(str: string) {
     return str.endsWith(";") ? str : str + ";";
@@ -591,7 +600,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const [mainTitle, directives] = node.properties.title.split(">");
         node.properties.title = mainTitle.trim() || undefined;
 
-        const attrs = directives.trim().split(" ").filter(Boolean);
+        const attrs = split(directives);
         attrs.forEach((attr) => {
           if (attr.startsWith("#")) {
             node.properties.id = attr.slice(1);
@@ -614,7 +623,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 node.properties.style = appendStyle(node.properties.style, `${key}:${value}`);
               }
             } else if (key === "style") {
-              node.properties.style = appendStyle(node.properties.style, value);
+              node.properties.style = appendStyle(
+                node.properties.style,
+                value.replaceAll("~", " "),
+              );
             } else {
               node.properties[key] = value;
             }
@@ -717,14 +729,16 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const current = typeof existing.value === "string" ? existing.value : undefined;
           const currentClasses = new Set(current?.split(/\s+/).filter(Boolean));
           if (typeof value === "string") currentClasses.add(value);
-          const merged = Array.from(currentClasses).join(" ");
+          const merged = join(Array.from(currentClasses));
           existing.value = typeof value === "object" ? value : merged;
         } else if (name === "style") {
           const current = typeof existing.value === "string" ? existing.value : "";
-          if (typeof value === "string") {
-            existing.value = ensureSemiColon(current) + ensureSemiColon(value);
-          } else if (typeof value === "object") {
-            existing.value = value;
+          if (typeof existing.value === "string" && typeof value === "string") {
+            existing.value = existing.value
+              ? ensureSemiColon(existing.value) + ensureSemiColon(value)
+              : ensureSemiColon(value);
+          } else if (typeof existing.value === "object" && typeof value === "object") {
+            console.log({ existing: existing.value, patched: value });
           }
         } else {
           existing.value = isExpression ? value : String(value);
@@ -747,7 +761,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     function composeAttributeValueExpressionLiteral(
       value: string | number | boolean,
     ): MdxJsxAttributeValueExpression {
@@ -763,6 +776,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 value: value,
                 raw: JSON.stringify(value),
               },
+            },
+          ]),
+        },
+      };
+    }
+
+    function composeAttributeValueExpressionStyle(
+      value: string,
+    ): MdxJsxAttributeValueExpression {
+      return {
+        type: "mdxJsxAttributeValueExpression",
+        value: toObjectLiteral(styleToObject(value)),
+        data: {
+          estree: program([
+            {
+              type: "ExpressionStatement",
+              expression: valueToEstree(styleToObject(value)),
             },
           ]),
         },
@@ -907,7 +937,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             const [mainTitle, directives] = title.split(">");
             titleAttribute.value = mainTitle.trim() || undefined;
 
-            const attrs = directives.trim().split(" ").filter(Boolean);
+            const attrs = split(directives);
             if (attrs.length) {
               const attributes = structuredClone(node.attributes);
               console.dir({ before: attributes }, { depth: 12 });
@@ -927,7 +957,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                       // updateOrAddMdxAttribute(attributes, "style", `${key}:${value};`);
                     }
                   } else if (key === "style") {
-                    // updateOrAddMdxAttribute(attributes, "style", `${value};`);
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      key,
+                      composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
+                    );
                   } else {
                     updateOrAddMdxAttribute(attributes, key, value);
                   }
