@@ -91,7 +91,6 @@
     "estree-util-value-to-estree": "^3.3.3",
     "hast-util-whitespace": "^3.0.0",
     "mdast-util-mdx-jsx": "^3.2.0",
-    "property-information": "^7.0.0",
     "space-separated-tokens": "^2.0.2",
     "style-to-js": "^1.1.16",
     "unist-util-visit": "^5.0.0",
