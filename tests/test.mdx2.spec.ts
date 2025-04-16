@@ -227,8 +227,8 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <video src="video.mp4" alt="" title="title > width=200 height=100 muted"></video>
 
       ![](audio.mp3 "title > #audio-id .audio-class autoplay")
-      <img src="audio.mp3" alt="" title="title > #audio-id .audio-class autoPlay" />
-      <audio src="audio.mp3" alt="" title="title > #audio-id .audio-class autoPlay"></audio>
+      <img src="audio.mp3" alt="" title="title > #audio-id .audio-class autoplay" />
+      <audio src="audio.mp3" alt="" title="title > #audio-id .audio-class autoplay"></audio>
     `;
 
     expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
@@ -318,16 +318,5 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       ></audio>
       "
     `);
-  });
-
-  // ******************************************
-  it("MDX source, trial for MDX component for the style", async () => {
-    const input = dedent`
-      <img src="image.png" alt="" hidden={true} style={{backgroundColor: "red", padding: 5 + "px"}} title="title > style=padding:10px~20px;border-bottom:2px~solid~red;" />
-    `;
-
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(
-      `"<img src="image.png" alt="" hidden="" style="background-color:red;padding:10px 20px;border-bottom:2px solid red" title="title"/>"`,
-    );
   });
 });

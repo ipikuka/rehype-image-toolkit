@@ -100,6 +100,40 @@ const img = {
   l: "loading",
 };
 
+const htmlToReactAttrMap: Record<string, string> = {
+  // Global
+  class: "className",
+  for: "htmlFor",
+  tabindex: "tabIndex",
+  readonly: "readOnly",
+  autofocus: "autoFocus",
+  crossorigin: "crossOrigin",
+  spellcheck: "spellCheck",
+  contenteditable: "contentEditable",
+  inputmode: "inputMode",
+  enterkeyhint: "enterKeyHint",
+  accesskey: "accessKey",
+
+  // <img>
+  srcset: "srcSet",
+  usemap: "useMap",
+  referrerpolicy: "referrerPolicy",
+  fetchpriority: "fetchPriority",
+  elementtiming: "elementTiming",
+  ismap: "isMap",
+  longdesc: "longDesc",
+
+  // <video> / <audio>
+  autoplay: "autoPlay",
+  playsinline: "playsInline",
+  controlslist: "controlsList",
+  disablepictureinpicture: "disablePictureInPicture",
+  disableremoteplayback: "disableRemotePlayback",
+
+  // <a>
+  hreflang: "hrefLang",
+};
+
 const videoMimeTypes: Record<string, string> = {
   mp4: "video/mp4",
   mov: "video/quicktime",
@@ -970,7 +1004,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                       composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
                     );
                   } else {
-                    updateOrAddMdxAttribute(attributes, key, value);
+                    updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
                   }
                 } else if (attr.includes("x")) {
                   const [width, height] = attr.split("x");
@@ -1004,7 +1038,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                   // updateOrAddMdxAttribute(attributes, attr, null);
                   updateOrAddMdxAttribute(
                     attributes,
-                    attr,
+                    htmlToReactAttrMap[attr] || attr,
                     composeAttributeValueExpressionLiteral(true),
                   );
                 }
