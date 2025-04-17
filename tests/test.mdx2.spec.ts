@@ -209,7 +209,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO handle name casing like autoplay autoPlay
   // ******************************************
   it("MDX source, handle adding attributes utilizing title attribute", async () => {
     const input = dedent`

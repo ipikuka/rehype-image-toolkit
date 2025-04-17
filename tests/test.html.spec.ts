@@ -6,14 +6,20 @@ import { processHtml } from "./util";
 
 describe("reyhpe-image-hack, with html sources", () => {
   // *************************************
-  it("process html input, preserve simple image", async () => {
+  it("process html input, preserve basic html <img>, <video>, and <audio>", async () => {
     const input = dedent`
       <img src="image.png" alt="alt">
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>
     `;
 
     const html = String(await processHtml(input));
 
-    expect(html).toMatchInlineSnapshot(`"<img src="image.png" alt="alt">"`);
+    expect(html).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="alt">
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>"
+    `);
   });
 
   // *************************************

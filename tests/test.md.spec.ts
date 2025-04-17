@@ -538,6 +538,57 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
+  it("handle adding figure for html images/videos/audio in blockquotes", async () => {
+    const input = dedent`
+      > Here is the image. <img src="image.png" alt="*Image Caption">
+      >
+      > Here is the video. <img src="video.mp4" alt="*Video Caption">
+      >
+      > Here is the audio. <img src="audio.mp3" alt="*Audio Caption">
+    `;
+
+    const html = String(
+      await processMdRawFirst(input, {
+        alwaysAddControlsForVideos: true,
+        alwaysAddControlsForAudio: true,
+        figureCaptionPosition: "above",
+      }),
+    );
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<blockquote>
+        <p>Here is the image.</p>
+        <figure>
+          <figcaption>Image Caption</figcaption>
+          <img src="image.png" alt="Image Caption" />
+        </figure>
+        <p>Here is the video.</p>
+        <figure>
+          <figcaption>Video Caption</figcaption>
+          <video controls><source src="video.mp4" type="video/mp4" /></video>
+        </figure>
+        <p>Here is the audio.</p>
+        <figure>
+          <figcaption>Audio Caption</figcaption>
+          <audio controls><source src="audio.mp3" type="audio/mpeg" /></audio>
+        </figure>
+      </blockquote>
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<blockquote>
+      <p>Here is the image.</p>
+      <figure><figcaption>Image Caption</figcaption><img src="image.png" alt="Image Caption"></figure>
+      <p>Here is the video.</p>
+      <figure><figcaption>Video Caption</figcaption><video controls><source src="video.mp4" type="video/mp4"></video></figure>
+      <p>Here is the audio.</p>
+      <figure><figcaption>Audio Caption</figcaption><audio controls><source src="audio.mp3" type="audio/mpeg"></audio></figure>
+      </blockquote>"
+    `);
+  });
+
+  // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
       > Here is the image. <img alt="*Image Caption" src="image.png">
@@ -697,6 +748,45 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <video style="height:70%;max-width:500px;" controls autoplay loop><source src="video.mp4" type="video/mp4"></video>
       <video autoplay loop style="max-width:500px;height:70%;" controls><source src="video.mp4" type="video/mp4"></video>
       <video autoplay loop style="max-width:500px;width:70%;" controls><source src="video.mp4" type="video/mp4"></video>"
+    `);
+  });
+
+  // ******************************************
+  it("additional properties in html elements <img>, <video> and <audio>", async () => {
+    const input = dedent`
+      <img src="image.png" alt="" title="title > style=color:red;padding:5px~10px">
+      <img src="image.png" alt="" style="border:none" title="> style=color:red;padding:5px~10px">
+      <img src="image.png" loading="eager" title="title > loading=lazy data-xyz=true">
+      <video src="image.png" class="ex1" title="title > .new"></video>
+      <audio src="image.png" class="ex1 ex2" title="title > .new"></audio>
+    `;
+
+    const html = String(await processMdRawFirst(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<img
+        src="image.png"
+        alt=""
+        title="title"
+        style="color: red; padding: 5px 10px"
+      />
+      <img
+        src="image.png"
+        alt=""
+        style="border: none; color: red; padding: 5px 10px"
+      />
+      <img src="image.png" loading="lazy" title="title" data-xyz="true" />
+      <video src="image.png" class="ex1 new" title="title"></video>
+      <audio src="image.png" class="ex1 ex2 new" title="title"></audio>
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="" title="title" style="color:red;padding:5px 10px;">
+      <img src="image.png" alt="" style="border:none;color:red;padding:5px 10px;">
+      <img src="image.png" loading="lazy" title="title" data-xyz="true">
+      <video src="image.png" class="ex1 new" title="title"></video>
+      <audio src="image.png" class="ex1 ex2 new" title="title"></audio>"
     `);
   });
 
