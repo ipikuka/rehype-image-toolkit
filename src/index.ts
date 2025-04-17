@@ -510,25 +510,22 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       if (node.properties.markedAsToBeInFigure) {
         const caption = node.properties.captionInFigure;
 
-        const figcaptionElement =
-          caption === undefined
-            ? undefined
-            : ({
-                type: "element",
-                tagName: "figcaption",
-                properties: {},
-                children: [{ type: "text", value: caption }],
-              } as Element);
+        const figcaptionElement: Element = {
+          type: "element",
+          tagName: "figcaption",
+          properties: {},
+          children: [{ type: "text", value: caption! }],
+        };
 
         const figureElement: Element = {
           type: "element",
           tagName: "figure",
           properties: {},
-          children: figcaptionElement
-            ? settings.figureCaptionPosition === "above"
+          children: !caption
+            ? [node]
+            : settings.figureCaptionPosition === "above"
               ? [figcaptionElement, node]
-              : [node, figcaptionElement]
-            : [node],
+              : [node, figcaptionElement],
         };
 
         node.properties.markedAsToBeInFigure = undefined;
@@ -591,7 +588,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           if (attr.startsWith("#")) {
             node.properties.id = attr.slice(1);
           } else if (attr.startsWith(".")) {
-            /* v8 ignore next 4 */
             if (Array.isArray(node.properties.className)) {
               node.properties.className.push(attr.slice(1));
             } else if (typeof node.properties.className === "string") {
