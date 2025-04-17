@@ -1,19 +1,18 @@
 import type { Plugin } from "unified";
-import type { Program } from "estree";
+
 import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
-import { parse as split, stringify as join } from "space-separated-tokens";
-import styleToObject from "style-to-js";
-import { valueToEstree } from "estree-util-value-to-estree";
+import { parse as split } from "space-separated-tokens";
 
-import type {
-  MdxJsxAttribute,
-  MdxJsxAttributeValueExpression,
-  MdxJsxExpressionAttribute,
-  MdxJsxFlowElementHast,
-} from "mdast-util-mdx-jsx";
+import type { MdxJsxFlowElementHast } from "mdast-util-mdx-jsx";
+import { appendStyle } from "./utils/index.js";
+import {
+  composeAttributeValueExpressionLiteral,
+  composeAttributeValueExpressionStyle,
+  updateOrAddMdxAttribute,
+} from "./utils/util.mdxjsx.js";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -67,38 +66,6 @@ type PartiallyRequiredImageHackOptions = Prettify<
     "figureCaptionPosition" | "alwaysAddControlsForVideos" | "alwaysAddControlsForAudio"
   >
 >;
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const video = {
-  a: "autoplay",
-  c: "controls",
-  l: "loop",
-  m: "muted",
-  s: "src",
-  w: "width",
-  h: "height",
-  p: "poster",
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const audio = {
-  a: "autoplay",
-  c: "controls",
-  l: "loop",
-  m: "muted",
-  s: "src",
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const img = {
-  a: "alt",
-  s: "src",
-  ss: "srcset",
-  sz: "sizes",
-  w: "width",
-  h: "height",
-  l: "loading",
-};
 
 const htmlToReactAttrMap: Record<string, string> = {
   // Global
@@ -196,23 +163,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
   const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
 
-  function toObjectLiteral(obj: Record<string, unknown>): string {
-    return `{${Object.entries(obj)
-      .map(([key, value]) => `${key}:${JSON.stringify(value)}`)
-      .join(",")}}`;
-  }
-
-  function ensureSemiColon(str: string) {
-    return str.endsWith(";") ? str : str + ";";
-  }
-
-  function appendStyle(
-    existing: string | number | boolean | (string | number)[] | null | undefined,
-    patch: string,
-  ): string {
-    const base = typeof existing === "string" ? ensureSemiColon(existing) : "";
-    return base + ensureSemiColon(patch);
-  }
+  // TODO: support svg
+  // look at https://www.npmjs.com/package/hast-util-properties-to-mdx-jsx-attributes
 
   /**
    * Transform.
@@ -305,7 +257,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * preparation visit on MdxJsxFlowElementHast and MdxJsxTextElementHast
+     * preparation visit on MdxJsxFlowElement and MdxJsxTextElement
      *
      * remove the brackets/parentheses around the videos/audio sources since they will not be auto linked
      * mark the images as to be autolinked if there are brackets/parentheses around the source
@@ -405,10 +357,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     );
 
     /**
+     * unravelling visit on <p> elements looking Element, MdxJsxFlowElement and MdxJsxTextElement
+     *
      * unravel images to be converted into videos/audio or to be wrapped with figure in paragraphs
      * unravel also videos/audio wrapped with a paragraph (it may happen while remark/rehype parsing)
-     *
-     * visit <p> elements looking Element, MdxJsxFlowElement and MdxJsxTextElement
      *
      * Mutates `children` of paragraph nodes.
      */
@@ -553,7 +505,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      // The part for adding figure and caption ****************************
+      // The application part for adding figure and caption ****************************
 
       if (node.properties.markedAsToBeInFigure) {
         const caption = node.properties.captionInFigure;
@@ -586,7 +538,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return index;
       }
 
-      // The part for convertion to video/audio ****************************
+      // The application part for convertion to video/audio ****************************
 
       if (node.properties.markedAsToBeConverted) {
         const [newTagName, extension] = node.properties.convertionString!.split("/");
@@ -628,7 +580,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return index;
       }
 
-      // The part for adding attributes utilizing title ************************
+      // The application part for adding attributes utilizing title ************************
 
       if (node.properties.title?.includes(">")) {
         const [mainTitle, directives] = node.properties.title.split(">");
@@ -684,7 +636,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         });
       }
 
-      // The part for adding autolink ***********************************
+      // The application part for adding autolink ***********************************
 
       if (node.properties.markedAsToBeAutoLinked) {
         const src = node.properties.src;
@@ -729,118 +681,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
     });
 
-    function updateOrAddMdxAttribute(
-      attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
-      name: string,
-      value: MdxJsxAttributeValueExpression | string | number | boolean | null | undefined,
-    ): void {
-      const existing = attributes.find(
-        (attr): attr is MdxJsxAttribute =>
-          attr.type === "mdxJsxAttribute" && attr.name === name,
-      );
-
-      if (value === undefined) {
-        if (existing) attributes.splice(attributes.indexOf(existing), 1);
-
-        return;
-      }
-
-      if (value === null) {
-        if (existing) {
-          existing.value = null;
-        } else {
-          attributes.push({ type: "mdxJsxAttribute", name, value: null });
-        }
-
-        return;
-      }
-
-      const isExpression = typeof value === "object";
-      const newValue = isExpression ? value : String(value);
-
-      if (existing) {
-        if (name === "class") {
-          const current = typeof existing.value === "string" ? existing.value : undefined;
-          const currentClasses = new Set(current?.split(/\s+/).filter(Boolean));
-          if (typeof value === "string") currentClasses.add(value);
-          const merged = join(Array.from(currentClasses));
-          existing.value = typeof value === "object" ? value : merged;
-        } else if (name === "style") {
-          if (typeof existing.value === "string" && typeof value === "string") {
-            existing.value = existing.value
-              ? ensureSemiColon(existing.value) + ensureSemiColon(value)
-              : ensureSemiColon(value);
-          } else if (typeof existing.value === "object" && typeof value === "object") {
-            const expressionStatementExisting = existing.value?.data?.estree?.body[0];
-            const expressionStatementPatch = value.data?.estree?.body[0];
-            if (
-              expressionStatementExisting?.type === "ExpressionStatement" &&
-              expressionStatementPatch?.type === "ExpressionStatement" &&
-              expressionStatementExisting.expression.type === "ObjectExpression" &&
-              expressionStatementPatch.expression.type === "ObjectExpression"
-            ) {
-              expressionStatementExisting.expression.properties.push(
-                ...expressionStatementPatch.expression.properties,
-              );
-            }
-          }
-        } else {
-          existing.value = newValue;
-        }
-      } else {
-        attributes.push({ type: "mdxJsxAttribute", name, value: newValue });
-      }
-    }
-
-    function program(body: Program["body"]): Program {
-      return {
-        type: "Program",
-        body: body,
-        sourceType: "module",
-        comments: [],
-      };
-    }
-
-    function composeAttributeValueExpressionLiteral(
-      value: string | number | boolean,
-    ): MdxJsxAttributeValueExpression {
-      return {
-        type: "mdxJsxAttributeValueExpression",
-        value: JSON.stringify(value),
-        data: {
-          estree: program([
-            {
-              type: "ExpressionStatement",
-              expression: {
-                type: "Literal",
-                value: value,
-                raw: JSON.stringify(value),
-              },
-            },
-          ]),
-        },
-      };
-    }
-
-    function composeAttributeValueExpressionStyle(
-      value: string,
-    ): MdxJsxAttributeValueExpression {
-      return {
-        type: "mdxJsxAttributeValueExpression",
-        value: toObjectLiteral(styleToObject(value)),
-        data: {
-          estree: program([
-            {
-              type: "ExpressionStatement",
-              expression: valueToEstree(styleToObject(value)),
-            },
-          ]),
-        },
-      };
-    }
-
     /**
-     * application visit on on MdxJsxFlowElementHast and MdxJsxTextElementHast
+     * application visit on on MdxJsxFlowElement and MdxJsxTextElement
      *
      * wrap marked images/videos/audio with <figure> element and add caption
      * convert marked images into to <video> / <audio> elements
@@ -867,25 +709,22 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         if (node.data?.markedAsToBeInFigure) {
           const caption = node.data.captionInFigure;
 
-          const figcaptionElement: MdxJsxFlowElementHast | undefined =
-            caption === undefined
-              ? undefined
-              : {
-                  type: "mdxJsxFlowElement",
-                  name: "figcaption",
-                  attributes: [],
-                  children: [{ type: "text", value: caption }],
-                };
+          const figcaptionElement: MdxJsxFlowElementHast = {
+            type: "mdxJsxFlowElement",
+            name: "figcaption",
+            attributes: [],
+            children: [{ type: "text", value: caption! }],
+          };
 
           const figureElement: MdxJsxFlowElementHast = {
             type: "mdxJsxFlowElement",
             name: "figure",
             attributes: [],
-            children: figcaptionElement
-              ? settings.figureCaptionPosition === "above"
+            children: !caption
+              ? [node]
+              : settings.figureCaptionPosition === "above"
                 ? [figcaptionElement, node]
-                : [node, figcaptionElement]
-              : [node],
+                : [node, figcaptionElement],
           };
 
           node.data.markedAsToBeInFigure = undefined;
