@@ -590,8 +590,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           } else if (attr.startsWith(".")) {
             if (Array.isArray(node.properties.className)) {
               node.properties.className.push(attr.slice(1));
-            } else if (typeof node.properties.className === "string") {
-              node.properties.className = [node.properties.className, attr.slice(1)];
             } else {
               node.properties.className = [attr.slice(1)];
             }
@@ -678,7 +676,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     /**
-     * application visit on on MdxJsxFlowElement and MdxJsxTextElement
+     * application visit on MdxJsxFlowElement and MdxJsxTextElement
      *
      * wrap marked images/videos/audio with <figure> element and add caption
      * convert marked images into to <video> / <audio> elements
@@ -700,7 +698,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
-        // The part for adding figure and caption ****************************
+        // The application part for adding figure and caption ****************************
 
         if (node.data?.markedAsToBeInFigure) {
           const caption = node.data.captionInFigure;
@@ -730,7 +728,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return index;
         }
 
-        // The part for convertion to video/audio ****************************
+        // The application part for convertion to video/audio ****************************
 
         if (node.data?.markedAsToBeConverted) {
           const [newTagName, extension] = node.data.convertionString!.split("/");
@@ -795,7 +793,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return index;
         }
 
-        // The part for adding attributes utilizing title ************************
+        // The application part for adding attributes utilizing title ************************
 
         const titleAttribute = node.attributes.find(
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "title",
@@ -884,7 +882,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           }
         }
 
-        // The part for adding autolink ***********************************
+        // The application part for adding autolink ***********************************
 
         if (node.data?.markedAsToBeAutoLinked) {
           const srcAttribute = node.attributes.find(
