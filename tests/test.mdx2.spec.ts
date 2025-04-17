@@ -319,4 +319,34 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       "
     `);
   });
+
+  // ******************************************
+  it("patchs classnames and styles in markdown format", async () => {
+    const inputMd = dedent`
+      <img src="image.png" alt="" title="title > style=color:red;padding:5px~10px"/>
+      <img src="image.png" style="border:none" alt="" title="> style=color:red;padding:5px~10px"/>
+      <img src="image.png" class="ex1" alt="" title="title > .new"/>
+      <img src="image.png" class="ex1 ex2" alt="" title="title > .new"/>
+      <img src="image.png" loading="eager" title="title > loading=lazy"/>
+    `;
+
+    const inputMdx = dedent`
+      <img src="image.png" alt="" title="title > style=color:red;padding:5px~10px"/>
+      <img src="image.png" style={{border: "none"}} alt="" title="> style=color:red;padding:5px~10px"/>
+      <img src="image.png" className="ex1" alt="" title="title > .new"/>
+      <img src="image.png" className="ex1 ex2" alt="" title="title > .new"/>
+      <img src="image.png" loading="eager" title="title > loading=lazy"/>
+    `;
+
+    const output = `
+      "<img src="image.png" alt="" title="title" style="color:red;padding:5px 10px"/>
+      <img src="image.png" style="border:none;color:red;padding:5px 10px" alt=""/>
+      <img src="image.png" class="ex1 new" alt="" title="title"/>
+      <img src="image.png" class="ex1 ex2 new" alt="" title="title"/>
+      <img src="image.png" loading="lazy" title="title"/>"
+    `;
+
+    expect(await processMdxRaw(inputMd, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(inputMdx, "mdx")).toMatchInlineSnapshot(output);
+  });
 });
