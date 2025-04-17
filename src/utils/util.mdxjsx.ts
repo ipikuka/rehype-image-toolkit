@@ -8,7 +8,7 @@ import type {
   MdxJsxExpressionAttribute,
 } from "mdast-util-mdx-jsx";
 
-import { ensureSemiColon, toObjectLiteral } from "./index.js";
+import { toObjectLiteral } from "./index.js";
 
 export function updateOrAddMdxAttribute(
   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
