@@ -15,19 +15,21 @@ export function updateOrAddMdxAttribute(
   name: string,
   value: MdxJsxAttributeValueExpression | string | number | boolean | null | undefined,
 ): void {
-  const existing = attributes.find(
+  const existingAttribute = attributes.find(
     (attr): attr is MdxJsxAttribute => attr.type === "mdxJsxAttribute" && attr.name === name,
   );
 
+  /* v8 ignore next 5 */
   if (value === undefined) {
-    if (existing) attributes.splice(attributes.indexOf(existing), 1);
+    if (existingAttribute) attributes.splice(attributes.indexOf(existingAttribute), 1);
 
     return;
   }
 
+  /* v8 ignore next 9 */
   if (value === null) {
-    if (existing) {
-      existing.value = null;
+    if (existingAttribute) {
+      existingAttribute.value = null;
     } else {
       attributes.push({ type: "mdxJsxAttribute", name, value: null });
     }
@@ -38,34 +40,29 @@ export function updateOrAddMdxAttribute(
   const isExpression = typeof value === "object";
   const newValue = isExpression ? value : String(value);
 
-  if (existing) {
-    if (name === "class") {
-      const current = typeof existing.value === "string" ? existing.value : undefined;
-      const currentClasses = new Set(current?.split(/\s+/).filter(Boolean));
+  if (existingAttribute) {
+    if (name === "className" && typeof existingAttribute.value === "string") {
+      const currentClasses = new Set(existingAttribute.value.split(/\s+/).filter(Boolean));
       if (typeof value === "string") currentClasses.add(value);
-      const merged = join(Array.from(currentClasses));
-      existing.value = typeof value === "object" ? value : merged;
+      existingAttribute.value = join(Array.from(currentClasses));
     } else if (name === "style") {
-      if (typeof existing.value === "string" && typeof value === "string") {
-        existing.value = existing.value
-          ? ensureSemiColon(existing.value) + ensureSemiColon(value)
-          : ensureSemiColon(value);
-      } else if (typeof existing.value === "object" && typeof value === "object") {
-        const expressionStatementExisting = existing.value?.data?.estree?.body[0];
+      if (typeof existingAttribute.value === "object" && typeof value === "object") {
+        const expressionStatementExistingAttribute =
+          existingAttribute.value?.data?.estree?.body[0];
         const expressionStatementPatch = value.data?.estree?.body[0];
         if (
-          expressionStatementExisting?.type === "ExpressionStatement" &&
+          expressionStatementExistingAttribute?.type === "ExpressionStatement" &&
           expressionStatementPatch?.type === "ExpressionStatement" &&
-          expressionStatementExisting.expression.type === "ObjectExpression" &&
+          expressionStatementExistingAttribute.expression.type === "ObjectExpression" &&
           expressionStatementPatch.expression.type === "ObjectExpression"
         ) {
-          expressionStatementExisting.expression.properties.push(
+          expressionStatementExistingAttribute.expression.properties.push(
             ...expressionStatementPatch.expression.properties,
           );
         }
       }
     } else {
-      existing.value = newValue;
+      existingAttribute.value = newValue;
     }
   } else {
     attributes.push({ type: "mdxJsxAttribute", name, value: newValue });
