@@ -101,6 +101,24 @@ describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
   });
 
   // ******************************************
+  it("process markdown input, the <img> elements are in an anchor <a>", async () => {
+    const input = dedent`
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+
+      <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+    `;
+
+    const html = String(await utils.processMd(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>
+      </p>
+      <p></p>"
+    `);
+  });
+
+  // ******************************************
   it("handle basic paragraph that consists of image syntaxes", async () => {
     const input = dedent`
       See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
@@ -258,6 +276,24 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
       <img alt="*Image Caption" src="image.png">
       <p><audio alt="*Audio Caption" src="audio.mp3"></audio></p>
       <p>hello</p>"
+    `);
+  });
+
+  // ******************************************
+  it("process markdown input, the <img> elements are in an anchor <a>", async () => {
+    const input = dedent`
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+
+      <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+    `;
+
+    const html = String(await utils.processMdRaw(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"><img src="image.png" alt=""></a>
+      <a href="https://example.com"><img src="image.png" alt=""></a></p>
+      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""></a></figure><p></p>"
     `);
   });
 

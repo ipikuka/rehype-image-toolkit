@@ -79,6 +79,24 @@ describe("reyhpe-image-hack from MDX source, format mdx", () => {
   });
 
   // ******************************************
+  it("process markdown input, the <img> elements are in an anchor <a>", async () => {
+    const input = dedent`
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+
+      <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+    `;
+
+    const html = await utils.processMdx(input, "mdx");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>"
+    `);
+  });
+
+  // ******************************************
   it("handle basic paragraph that consists of image syntaxes", async () => {
     const input = dedent`
       See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
@@ -153,6 +171,24 @@ describe("reyhpe-image-hack from MDX source, format md", () => {
     const html = await utils.processMdx(input, "md");
 
     expect(html).toMatchInlineSnapshot(`"<p><img src="image.png" alt=""/></p>"`);
+  });
+
+  // ******************************************
+  it("process markdown input, the <img> elements are in an anchor <a>", async () => {
+    const input = dedent`
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+
+      <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+    `;
+
+    const html = await utils.processMdx(input, "md");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>
+      </p>
+      <p></p>"
+    `);
   });
 
   // ******************************************
@@ -241,6 +277,25 @@ describe("reyhpe-image-hack from MDX source, format md, with rehype-raw", () => 
       "<img src="image.jpg" alt=""/>  
       <img src="image.png" alt=""/>
       <p><img src="image.png" alt=""/></p>"
+    `);
+  });
+
+  // interesting !
+  // ******************************************
+  it("process markdown input, the <img> elements are in an anchor <a>", async () => {
+    const input = dedent`
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+      <a href="https://example.com"><img src="image.png" alt="" /></a>
+
+      <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+    `;
+
+    const html = String(await utils.processMdxRaw(input, "md"));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure><p></p>"
     `);
   });
 
