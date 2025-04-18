@@ -8,7 +8,7 @@
 [![typescript][badge-typescript]][url-typescript]
 [![license][badge-license]][url-license]
 
-This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax and MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, parsing directives in title for styling and attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.**
+This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax `![]()` and MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, parsing directives in title for styling and attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.**
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
@@ -18,7 +18,7 @@ Markdown natively supports images but lacks built-in syntax for videos and audio
 
 As far as I can see, other Remark/Rehype plugins related with markdown images apply their features to all images within the content without offering selectivity. For example, I may not want every image to be wrapped in a `<figure>` element, have a caption, or be automatically linked to its original source. In some cases, I need certain images to be excluded from these transformations.
 
-That's why, while developing **`rehype-image-hack`**, I ensured that each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one for images"** approach to provide all the essential features related to Markdown image syntax in a single solution.
+That's why I ensured that each feature could be controlled individually through directives **`rehype-image-hack`**. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one"** approach to provide all the essential features related to Markdown image syntax in a single solution.
 
 **`rehype-image-hack`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
@@ -302,6 +302,27 @@ will produce:
   <figcaption>caption</figcaption>
 </figure>
 ```
+
+if you want to set different target for the `<figure>` and for the `<img>` inside, you can wrap the `src` attribute with **parentheses**, not brackets, and use the formal link syntax of markdown together:
+```markdown
+[![*caption]((image.png))](https://example.com)
+```
+will produce:
+```html
+<a href="https://example.com">
+  <figure>
+    <a href="image.png" target="_blank">
+      <img src="image.png" alt="Caption" />
+    </a>
+    <figcaption>Caption</figcaption>
+  </figure>
+</a>
+```
+
+According to the HTML specification, **anchor elements cannot be nested**. Despite being invalid, browsers try to render this gracefully. The actual behavior can differ slightly between browsers, but in most modern browsers like Chrome, Firefox, and Safari:
++ The inner `<a href="image.png" target="_blank">` wrapping the `<img>` will take precedence when clicking directly on the image.
++ Clicking directly on the `<img>` will open `image.png` in a new tab (because of `target="_blank"`).
++ Clicking outside the image but still inside the outer `<a>` (e.g., on the `figcaption`) will follow the outer link (`https://example.com`).
 
 ### Add caption for images/videos/audio (Explicit Figure)
 
