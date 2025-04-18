@@ -171,7 +171,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    */
   return (tree: Root): undefined => {
     // console.log before preperation
-    // console.dir(tree, { depth: 12 });
+    console.dir(tree, { depth: 12 });
 
     /**
      * preparation visit on Element
@@ -187,6 +187,31 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
+      // Preparation part for adding figure and caption *****************************
+
+      const isFigureParent = parent.type === "element" && parent.tagName === "figure";
+
+      const alt = node.properties.alt;
+      if (alt) {
+        const startsWith = {
+          plus: alt.startsWith("+"),
+          star: alt.startsWith("*"),
+          caption: alt.startsWith("caption:"),
+        };
+
+        if (startsWith.plus || startsWith.star || startsWith.caption) {
+          {
+            node.properties.markedAsToBeInFigure = true;
+
+            const figcaptionText =
+              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+
+            node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+            node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
+          }
+        }
+      }
+
       // Preparation part for adding autolink ***************************************
 
       const isAnchorParent = parent.type === "element" && parent.tagName === "a";
@@ -195,7 +220,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       let src = node.properties.src;
       if (src) {
-        const wrappers = [
+        const wrappers: {
+          wrapper: "bracket" | "parenthesis";
+          raw: RegExp;
+          encoded: RegExp;
+        }[] = [
           { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
           { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
         ];
@@ -215,33 +244,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               wwwRegex.test(src) ||
               fileLinkRegex.test(src);
 
-            if (node.tagName === "img" && !isAnchorParent && isValidAutolink) {
-              node.properties.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
+            if (node.tagName === "img" && isValidAutolink) {
+              const isFigurable = node.properties.markedAsToBeInFigure;
+              if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+                node.properties.markedAsToBeAutoLinked = wrapper;
+              }
               break; // stop after the first match
             }
-          }
-        }
-      }
-
-      // Preparation part for adding figure and caption *****************************
-
-      const alt = node.properties.alt;
-      if (alt) {
-        const startsWith = {
-          plus: alt.startsWith("+"),
-          star: alt.startsWith("*"),
-          caption: alt.startsWith("caption:"),
-        };
-
-        if (startsWith.plus || startsWith.star || startsWith.caption) {
-          {
-            node.properties.markedAsToBeInFigure = true;
-
-            const figcaptionText =
-              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
-
-            node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
-            node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
           }
         }
       }
@@ -278,46 +287,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
-        // Preparation part for adding autolink ***************************************
-
-        const isAnchorParent = parent.type === "mdxJsxFlowElement" && parent.name === "a";
-
-        const srcAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
-        );
-
-        if (srcAttribute && typeof srcAttribute.value === "string") {
-          let src = srcAttribute.value;
-          const wrappers = [
-            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
-            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
-          ];
-
-          for (const { wrapper, raw, encoded } of wrappers) {
-            const isRaw = raw.test(src);
-            const isEncoded = !isRaw && encoded.test(src);
-
-            if (isRaw || isEncoded) {
-              const sliceAmount = isRaw ? 1 : 3;
-              src = src.slice(sliceAmount, -sliceAmount);
-              srcAttribute.value = src;
-
-              const isValidAutolink =
-                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
-                rootRelativeRegex.test(src) ||
-                wwwRegex.test(src) ||
-                fileLinkRegex.test(src);
-
-              if (node.name === "img" && !isAnchorParent && isValidAutolink) {
-                node.data ??= {};
-                node.data.markedAsToBeAutoLinked = wrapper as "bracket" | "parenthesis";
-                break; // stop after the first match
-              }
-            }
-          }
-        }
-
         // Preparation part for adding figure and caption *****************************
+
+        const isFigureParent =
+          (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
+          parent.name === "figure";
 
         const altAttribute = node.attributes.find(
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
@@ -340,6 +314,54 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
             node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
             altAttribute.value = node.name === "img" ? figcaptionText : undefined;
+          }
+        }
+
+        // Preparation part for adding autolink ***************************************
+
+        const isAnchorParent =
+          (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
+          parent.name === "a";
+
+        const srcAttribute = node.attributes.find(
+          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
+        );
+
+        if (srcAttribute && typeof srcAttribute.value === "string") {
+          let src = srcAttribute.value;
+          const wrappers: {
+            wrapper: "bracket" | "parenthesis";
+            raw: RegExp;
+            encoded: RegExp;
+          }[] = [
+            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
+            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
+          ];
+
+          for (const { wrapper, raw, encoded } of wrappers) {
+            const isRaw = raw.test(src);
+            const isEncoded = !isRaw && encoded.test(src);
+
+            if (isRaw || isEncoded) {
+              const sliceAmount = isRaw ? 1 : 3;
+              src = src.slice(sliceAmount, -sliceAmount);
+              srcAttribute.value = src;
+
+              const isValidAutolink =
+                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+                rootRelativeRegex.test(src) ||
+                wwwRegex.test(src) ||
+                fileLinkRegex.test(src);
+
+              if (node.name === "img" && isValidAutolink) {
+                const isFigurable = node.data?.markedAsToBeInFigure;
+                if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+                  node.data ??= {};
+                  node.data.markedAsToBeAutoLinked = wrapper;
+                }
+                break; // stop after the first match
+              }
+            }
           }
         }
 
@@ -488,7 +510,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     // console.log before application; after preperation
-    // console.dir(tree, { depth: 8 });
+    console.dir(tree, { depth: 12 });
 
     /**
      * application visit on Element
@@ -955,7 +977,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     );
 
     // console.log after application
-    // console.dir(tree, { depth: 8 });
+    console.dir(tree, { depth: 12 });
   };
 };
 
