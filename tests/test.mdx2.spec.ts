@@ -28,7 +28,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO fix the last element within anchor not to be autolinked
   // ******************************************
   it("MDX source, handle autolinks", async () => {
     const input = dedent`
@@ -37,8 +36,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       ![]((image.png))
 
       handle ![]([image.png]) ![]((image.png)) in a paragraph
-
-      do not autolink [![]([image.png])](https://example.com)
 
       <img src="[image.png]" alt="" />
 
@@ -49,35 +46,208 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <img src="(image.png)" alt="" /> text
 
       handle <img src="[image.png]" alt="" /> <img src="(image.png)" alt="" /> in a paragraph
-
-      do not autolink <a href="https://example.com"><img src="[image.png]" alt="" /></a>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
       "<p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
-      <p>do not autolink <a href="https://example.com"><img src="image.png" alt=""/></a></p>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
-      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
-      <p>do not autolink <a href="https://example.com"><img src="image.png" alt=""/></a></p>"
+      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>"
     `);
 
     expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
       "<p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
-      <p>do not autolink <a href="https://example.com"><img src="image.png" alt=""/></a></p>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
-      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
-      <p>do not autolink <a href="https://example.com"><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></a></p>"
+      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>"
     `);
+  });
+
+  // ******************************************
+  it("MDX source, autolinks && caption already in a link and/or a figure - 1", async () => {
+    const input = dedent`
+      [![]([image.png])](https://example.com)
+      [![]((image.png))](https://example.com)
+
+      [![*Caption]([image.png])](https://example.com)
+      [![*Caption]((image.png))](https://example.com)
+
+      <a href="https://example.com"><img src="[image.png]" alt="" /></a>
+      <a href="https://example.com"><img src="(image.png)" alt="" /></a>
+
+      here is the image <a href="https://example.com"><img src="[image.png]" alt="" /></a>
+      here is the image <a href="https://example.com"><img src="(image.png)" alt="" /></a>
+
+      <a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a>
+      <a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a>
+    `;
+
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>
+      <p><a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <p>here is the image <a href="https://example.com"><img src="image.png" alt=""/></a>
+      here is the image <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>"
+    `);
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><img src="image.png" alt=""/></a>
+      <p>here is the image <a href="https://example.com"><img src="image.png" alt=""/></a>
+      here is the image <a href="https://example.com"><img src="image.png" alt=""/></a></p>
+      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>"
+    `);
+  });
+
+  // TODO
+  // ******************************************
+  it("MDX source, autolinks && caption already in a link and/or a figure - 2", async () => {
+    const input = dedent`
+      <a href="https://example.com"><figure><img src="[image.png]" alt="" /></figure></a>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="" /></a></figure>
+
+      <a href="https://example.com"><figure><img src="(image.png)" alt="" /></figure></a>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="" /></a></figure>
+
+      <a href="https://example.com"><figure><img src="[image.png]" alt="*Caption" /></figure></a>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a></figure>
+
+      <a href="https://example.com"><figure><img src="(image.png)" alt="*Caption" /></figure></a>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a></figure>
+    `;
+
+    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
+      .toMatchInlineSnapshot(`
+      "<p><a href="https://example.com"></a></p>
+      <figure>
+        <a href="https://example.com"><img src="image.png" alt="" /></a>
+      </figure>
+      <figure>
+        <a href="https://example.com"><img src="image.png" alt="" /></a>
+      </figure>
+      <p><a href="https://example.com"></a></p>
+      <figure>
+        <a href="https://example.com"><img src="image.png" alt="" /></a>
+      </figure>
+      <figure>
+        <a href="https://example.com"><img src="image.png" alt="" /></a>
+      </figure>
+      <p><a href="https://example.com"></a></p>
+      <figure>
+        <a href="https://example.com"
+          ><figure>
+            <img src="image.png" alt="Caption" />
+            <figcaption>Caption</figcaption>
+          </figure></a
+        >
+      </figure>
+      <figure>
+        <a href="https://example.com"
+          ><figure>
+            <img src="image.png" alt="Caption" />
+            <figcaption>Caption</figcaption>
+          </figure></a
+        >
+      </figure>
+      <p><a href="https://example.com"></a></p>
+      <figure>
+        <a href="https://example.com"
+          ><figure>
+            <a href="image.png" target="_blank"
+              ><img src="image.png" alt="Caption"
+            /></a>
+            <figcaption>Caption</figcaption>
+          </figure></a
+        >
+      </figure>
+      <figure>
+        <a href="https://example.com"
+          ><figure>
+            <a href="image.png" target="_blank"
+              ><img src="image.png" alt="Caption"
+            /></a>
+            <figcaption>Caption</figcaption>
+          </figure></a
+        >
+      </figure>
+      "
+    `);
+
+    // expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot();
+
+    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
+  });
+
+  // TODO
+  // ******************************************
+  it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
+    const input = dedent`
+      <figure><img src="https://example.com" alt="+Caption" /></figure>
+      <figure><img src="https://example.com" alt="+Caption" /></figure>
+
+      <figure><img src="https://example.com" alt="*Caption" /></figure>
+      <figure><img src="https://example.com" alt="*Caption" /></figure>
+
+      <figure><img src="[https://example.com]" alt="*Caption" /></figure>
+      <figure><img src="(https://example.com)" alt="*Caption" /></figure>
+    `;
+
+    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
+      .toMatchInlineSnapshot(`
+      "<figure>
+        <figure><img src="https://example.com" alt="Caption" /></figure>
+      </figure>
+      <figure>
+        <figure><img src="https://example.com" alt="Caption" /></figure>
+      </figure>
+      <figure>
+        <figure>
+          <img src="https://example.com" alt="Caption" />
+          <figcaption>Caption</figcaption>
+        </figure>
+      </figure>
+      <figure>
+        <figure>
+          <img src="https://example.com" alt="Caption" />
+          <figcaption>Caption</figcaption>
+        </figure>
+      </figure>
+      <figure>
+        <figure>
+          <img src="https://example.com" alt="Caption" />
+          <figcaption>Caption</figcaption>
+        </figure>
+      </figure>
+      <figure>
+        <figure>
+          <img src="https://example.com" alt="Caption" />
+          <figcaption>Caption</figcaption>
+        </figure>
+      </figure>
+      "
+    `);
+
+    // expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot();
+
+    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
   });
 
   // ******************************************
@@ -320,7 +490,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   });
 
   // ******************************************
-  it("patchs classnames and styles in markdown format", async () => {
+  it("patch classnames and styles", async () => {
     const inputMd = dedent`
       <img src="image.png" alt="" title="title > style=color:red;padding:5px~10px"/>
       <img src="image.png" style="border:none" alt="" title="> style=color:red;padding:5px~10px"/>
@@ -347,5 +517,25 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
     expect(await processMdxRaw(inputMd, "md")).toMatchInlineSnapshot(output);
     expect(await processMdx(inputMdx, "mdx")).toMatchInlineSnapshot(output);
+  });
+
+  // ******************************************
+  it.only("xxx", async () => {
+    const input = dedent`
+      <a href="https://example.com">
+        <figure><img src="[image.png]" alt="" /></figure>
+      </a>
+    `;
+
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<a href="https://example.com">
+        <a href="image.png" target="_blank"><figure><img src="image.png" alt=""/></figure></a>
+      </a>"
+    `);
+
+    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+    //   "<a href="https://example.com"><a href="image.png" target="_blank"><figure><img src="image.png" alt=""/></figure></a></a>
+    //   <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>"
+    // `);
   });
 });
