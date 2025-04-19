@@ -107,6 +107,10 @@ describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
       <a href="https://example.com"><img src="image.png" alt="" /></a>
 
       <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="" /></figure>
+      </a>
     `;
 
     const html = String(await utils.processMd(input));
@@ -286,6 +290,10 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
       <a href="https://example.com"><img src="image.png" alt="" /></a>
 
       <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="" /></figure>
+      </a>
     `;
 
     const html = String(await utils.processMdRaw(input));
@@ -293,7 +301,10 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
     expect(html).toMatchInlineSnapshot(`
       "<p><a href="https://example.com"><img src="image.png" alt=""></a>
       <a href="https://example.com"><img src="image.png" alt=""></a></p>
-      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""></a></figure><p></p>"
+      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""></a></figure><p></p>
+      <a href="https://example.com">
+        <figure><img src="image.png" alt=""></figure>
+      </a>"
     `);
   });
 

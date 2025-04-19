@@ -85,6 +85,10 @@ describe("reyhpe-image-hack from MDX source, format mdx", () => {
       <a href="https://example.com"><img src="image.png" alt="" /></a>
 
       <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="" /></figure>
+      </a>
     `;
 
     const html = await utils.processMdx(input, "mdx");
@@ -92,6 +96,7 @@ describe("reyhpe-image-hack from MDX source, format mdx", () => {
     expect(html).toMatchInlineSnapshot(`
       "<a href="https://example.com"><img src="image.png" alt=""/></a>
       <a href="https://example.com"><img src="image.png" alt=""/></a>
+      <a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>
       <a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>"
     `);
   });
@@ -180,6 +185,10 @@ describe("reyhpe-image-hack from MDX source, format md", () => {
       <a href="https://example.com"><img src="image.png" alt="" /></a>
 
       <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="" /></figure>
+      </a>
     `;
 
     const html = await utils.processMdx(input, "md");
@@ -288,6 +297,10 @@ describe("reyhpe-image-hack from MDX source, format md, with rehype-raw", () => 
       <a href="https://example.com"><img src="image.png" alt="" /></a>
 
       <a href="https://example.com"><figure><img src="image.png" alt="" /></figure></a>
+
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="" /></figure>
+      </a>
     `;
 
     const html = String(await utils.processMdxRaw(input, "md"));
@@ -295,7 +308,10 @@ describe("reyhpe-image-hack from MDX source, format md, with rehype-raw", () => 
     expect(html).toMatchInlineSnapshot(`
       "<p><a href="https://example.com"><img src="image.png" alt=""/></a>
       <a href="https://example.com"><img src="image.png" alt=""/></a></p>
-      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure><p></p>"
+      <p><a href="https://example.com"></a></p><figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure><p></p>
+      <a href="https://example.com">
+        <figure><img src="image.png" alt=""/></figure>
+      </a>"
     `);
   });
 
