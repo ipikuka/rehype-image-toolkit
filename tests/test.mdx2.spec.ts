@@ -121,16 +121,24 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, autolinks && caption already in a link and/or a figure - 2", async () => {
     const input = dedent`
-      <a href="https://example.com"><figure><img src="[image.png]" alt="" /></figure></a>
+      <a href="https://example.com">
+        <figure><img src="[image.png]" alt="" /></figure>
+      </a>
+      <a href="https://example.com">
+        <figure><img src="(image.png)" alt="" /></figure>
+      </a>
+      
       <figure><a href="https://example.com"><img src="[image.png]" alt="" /></a></figure>
-
-      <a href="https://example.com"><figure><img src="(image.png)" alt="" /></figure></a>
       <figure><a href="https://example.com"><img src="(image.png)" alt="" /></a></figure>
 
-      <a href="https://example.com"><figure><img src="[image.png]" alt="*Caption" /></figure></a>
+      <a href="https://example.com">
+        <figure><img src="[image.png]" alt="*Caption" /></figure>
+      </a>
+      <a href="https://example.com">
+        <figure><img src="(image.png)" alt="*Caption" /></figure>
+      </a>
+      
       <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a></figure>
-
-      <a href="https://example.com"><figure><img src="(image.png)" alt="*Caption" /></figure></a>
       <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a></figure>
     `;
 
@@ -196,51 +204,36 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
   });
 
-  // TODO
+  // TODO second and third part
   // ******************************************
-  it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
+  it.only("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
     const input = dedent`
       <figure><img src="https://example.com" alt="+Caption" /></figure>
-      <figure><img src="https://example.com" alt="+Caption" /></figure>
-
-      <figure><img src="https://example.com" alt="*Caption" /></figure>
       <figure><img src="https://example.com" alt="*Caption" /></figure>
 
+      <figure><img src="[https://example.com]" alt="+Caption" /></figure>
       <figure><img src="[https://example.com]" alt="*Caption" /></figure>
+      
+      <figure><img src="(https://example.com)" alt="+Caption" /></figure>
       <figure><img src="(https://example.com)" alt="*Caption" /></figure>
     `;
 
     expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
       .toMatchInlineSnapshot(`
-      "<figure>
-        <figure><img src="https://example.com" alt="Caption" /></figure>
-      </figure>
+      "<figure><img src="https://example.com" alt="Caption" /></figure>
       <figure>
-        <figure><img src="https://example.com" alt="Caption" /></figure>
+        <img src="https://example.com" alt="Caption" />
+        <figcaption>Caption</figcaption>
       </figure>
+      <figure><img src="https://example.com" alt="Caption" /></figure>
       <figure>
-        <figure>
-          <img src="https://example.com" alt="Caption" />
-          <figcaption>Caption</figcaption>
-        </figure>
+        <img src="https://example.com" alt="Caption" />
+        <figcaption>Caption</figcaption>
       </figure>
+      <figure><img src="https://example.com" alt="Caption" /></figure>
       <figure>
-        <figure>
-          <img src="https://example.com" alt="Caption" />
-          <figcaption>Caption</figcaption>
-        </figure>
-      </figure>
-      <figure>
-        <figure>
-          <img src="https://example.com" alt="Caption" />
-          <figcaption>Caption</figcaption>
-        </figure>
-      </figure>
-      <figure>
-        <figure>
-          <img src="https://example.com" alt="Caption" />
-          <figcaption>Caption</figcaption>
-        </figure>
+        <img src="https://example.com" alt="Caption" />
+        <figcaption>Caption</figcaption>
       </figure>
       "
     `);
@@ -522,20 +515,18 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it.only("xxx", async () => {
     const input = dedent`
-      <a href="https://example.com">
-        <figure><img src="[image.png]" alt="" /></figure>
-      </a>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a></figure>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
-      "<a href="https://example.com">
-        <a href="image.png" target="_blank"><figure><img src="image.png" alt=""/></figure></a>
-      </a>"
+      "<figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
+      <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
     `);
 
-    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-    //   "<a href="https://example.com"><a href="image.png" target="_blank"><figure><img src="image.png" alt=""/></figure></a></a>
-    //   <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>"
-    // `);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
+      <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
+    `);
   });
 });
