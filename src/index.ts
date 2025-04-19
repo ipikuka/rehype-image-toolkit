@@ -201,7 +201,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (startsWith.plus || startsWith.star || startsWith.caption) {
           {
-            node.properties.markedAsToBeInFigure = true;
+            if (!isFigureParent) node.properties.markedAsToBeInFigure = true;
 
             const figcaptionText =
               startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
@@ -307,7 +307,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
           if (startsWith.plus || startsWith.star || startsWith.caption) {
             node.data ??= {};
-            node.data.markedAsToBeInFigure = true;
+            if (!isFigureParent) node.data.markedAsToBeInFigure = true;
 
             const figcaptionText =
               startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
@@ -456,6 +456,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         const isVideo = element.tagName === "video";
         const isAudio = element.tagName === "audio";
+        const isFigure = element.tagName === "figure";
 
         const isRelevantImage = element.tagName === "img" && isMarkedElement(element);
 
@@ -466,11 +467,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               child.type === "element" &&
               ((child.tagName === "img" && isMarkedElement(child)) ||
                 child.tagName === "video" ||
-                child.tagName === "audio")
+                child.tagName === "audio" ||
+                child.tagName === "figure")
             );
           });
 
-        return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
+        return isVideo || isAudio || isFigure || isRelevantImage || isRelevantAnchor;
       }
 
       function isMarkedElement(el: ElementContent | undefined | null) {
@@ -485,6 +487,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         const isVideo = element.name === "video";
         const isAudio = element.name === "audio";
+        const isFigure = element.name === "figure";
 
         const isRelevantImage = element.name === "img" && isMarkedMdxJsxElement(element);
 
@@ -495,11 +498,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               (child.type === "mdxJsxFlowElement" || child.type === "mdxJsxTextElement") &&
               ((child.name === "img" && isMarkedMdxJsxElement(child)) ||
                 child.name === "video" ||
-                child.name === "audio")
+                child.name === "audio" ||
+                child.name === "figure")
             );
           });
 
-        return isVideo || isAudio || isRelevantImage || isRelevantAnchor;
+        return isVideo || isAudio || isFigure || isRelevantImage || isRelevantAnchor;
       }
 
       function isMarkedMdxJsxElement(el: ElementContent | undefined | null) {
@@ -555,6 +559,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         parent.children.splice(index, 1, figureElement);
         return index;
+      } else if (node.properties.captionInFigure) {
+        const caption = node.properties.captionInFigure;
+
+        const figcaptionElement: Element = {
+          type: "element",
+          tagName: "figcaption",
+          properties: {},
+          children: [{ type: "text", value: caption! }],
+        };
+
+        if (settings.figureCaptionPosition === "above") {
+          parent.children.unshift(figcaptionElement);
+        } else {
+          parent.children.push(figcaptionElement);
+        }
+
+        node.properties.captionInFigure = undefined;
       }
 
       // The application part for convertion to video/audio ****************************
@@ -667,6 +688,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             if (targetNode !== parent) return;
 
             const grandparent = ancestors.at(-1);
+            const isGrandparentAnchor =
+              grandparent?.type === "element" && grandparent.tagName === "a";
+
             if (
               !grandparent ||
               !("children" in grandparent) ||
@@ -677,7 +701,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             }
 
             const parentIndex = grandparent.children.indexOf(parent);
-            if (parentIndex !== -1) {
+            if (parentIndex !== -1 && !isGrandparentAnchor) {
               grandparent.children.splice(parentIndex, 1, {
                 type: "element",
                 tagName: "a",
@@ -748,6 +772,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
           parent.children.splice(index, 1, figureElement);
           return index;
+        } else if (node.data?.captionInFigure) {
+          const caption = node.data.captionInFigure;
+
+          const figcaptionElement: MdxJsxFlowElementHast = {
+            type: "mdxJsxFlowElement",
+            name: "figcaption",
+            attributes: [],
+            children: [{ type: "text", value: caption! }],
+          };
+
+          if (settings.figureCaptionPosition === "above") {
+            parent.children.unshift(figcaptionElement);
+          } else {
+            parent.children.push(figcaptionElement);
+          }
+
+          node.data.captionInFigure = undefined;
         }
 
         // The application part for convertion to video/audio ****************************
@@ -923,6 +964,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               if (targetNode !== parent) return;
 
               const grandparent = ancestors.at(-1);
+              const isGrandparentAnchor =
+                grandparent?.type === "mdxJsxFlowElement" && grandparent.name === "a";
+
               if (
                 !grandparent ||
                 !("children" in grandparent) ||
@@ -933,7 +977,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               }
 
               const parentIndex = grandparent.children.indexOf(parent);
-              if (parentIndex !== -1) {
+              if (parentIndex !== -1 && !isGrandparentAnchor) {
                 grandparent.children.splice(parentIndex, 1, {
                   type: "mdxJsxFlowElement",
                   name: "a",
