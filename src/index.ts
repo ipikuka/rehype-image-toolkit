@@ -189,8 +189,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // Preparation part for adding figure and caption *****************************
 
-      const isFigureParent = parent.type === "element" && parent.tagName === "figure";
-
       const alt = node.properties.alt;
       if (alt) {
         const startsWith = {
@@ -200,21 +198,18 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         };
 
         if (startsWith.plus || startsWith.star || startsWith.caption) {
-          {
-            if (!isFigureParent) node.properties.markedAsToBeInFigure = true;
+          const isFigureParent = parent.type === "element" && parent.tagName === "figure";
+          if (!isFigureParent) node.properties.markedAsToBeInFigure = true;
 
-            const figcaptionText =
-              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+          const figcaptionText =
+            startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
-            node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
-            node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
-          }
+          node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+          node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
         }
       }
 
       // Preparation part for adding autolink ***************************************
-
-      const isAnchorParent = parent.type === "element" && parent.tagName === "a";
 
       // const src = decodeURI(String(node.properties.src));
 
@@ -245,10 +240,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               fileLinkRegex.test(src);
 
             if (node.tagName === "img" && isValidAutolink) {
+              const isAnchorParent = parent.type === "element" && parent.tagName === "a";
               const isFigurable = node.properties.markedAsToBeInFigure;
+
               if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
                 node.properties.markedAsToBeAutoLinked = wrapper;
               }
+
               break; // stop after the first match
             }
           }
@@ -287,6 +285,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
+        // to start collecting data with empty object
+        node.data ??= {};
+
         // Preparation part for adding figure and caption *****************************
 
         const isFigureParent =
@@ -306,7 +307,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           };
 
           if (startsWith.plus || startsWith.star || startsWith.caption) {
-            node.data ??= {};
             if (!isFigureParent) node.data.markedAsToBeInFigure = true;
 
             const figcaptionText =
@@ -356,7 +356,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               if (node.name === "img" && isValidAutolink) {
                 const isFigurable = node.data?.markedAsToBeInFigure;
                 if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                  node.data ??= {};
                   node.data.markedAsToBeAutoLinked = wrapper;
                 }
                 break; // stop after the first match
@@ -370,10 +369,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const extension = getExtension(srcAttribute.value);
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
           if (needsConversion && node.name === "img") {
-            node.data ??= {};
             node.data.markedAsToBeConverted = true;
             node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
           }
+        }
+
+        // if `node.data` is empty than set it as undefined
+        if (Object.keys(node.data).length === 0) {
+          node.data = undefined;
         }
       },
     );
