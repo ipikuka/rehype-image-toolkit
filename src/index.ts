@@ -199,7 +199,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
    */
   return (tree: Root): undefined => {
     // console.log before preperation
-    console.dir(tree, { depth: 12 });
+    // console.dir(tree, { depth: 12 });
 
     /**
      * preparation visit on Element
@@ -241,6 +241,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding autolink ***************************************
 
       const src_ = node.properties.src;
+      /* v8 ignore next */
       let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
 
       if (src) {
@@ -302,7 +303,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
-        // start collecting data with empty object
+        // just for narrowing the type since node.data has always {_mdxExplicitJsx: true}
         node.data ??= {};
 
         // Preparation part for adding figure and caption *****************************
@@ -338,6 +339,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
         );
 
+        /* v8 ignore next 2*/
         const src_ = typeof srcAttribute?.value === "string" ? srcAttribute.value : undefined;
         let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
 
@@ -376,11 +378,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             node.data.markedAsToBeConverted = true;
             node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
           }
-        }
-
-        // if `node.data` is still empty than set it as undefined
-        if (Object.keys(node.data).length === 0) {
-          node.data = undefined;
         }
       },
     );
@@ -520,7 +517,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     });
 
     // console.log before application; after preperation
-    console.dir(tree, { depth: 12 });
+    // console.dir(tree, { depth: 12 });
 
     /**
      * application visit on Element
@@ -582,6 +579,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
 
         node.properties.captionInFigure = undefined;
+        return index;
       }
 
       // The application part for convertion to video/audio ****************************
@@ -794,6 +792,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           }
 
           node.data.captionInFigure = undefined;
+          return index;
         }
 
         // The application part for convertion to video/audio ****************************
@@ -1025,7 +1024,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     );
 
     // console.log after application
-    console.dir(tree, { depth: 12 });
+    // console.dir(tree, { depth: 12 });
   };
 };
 
