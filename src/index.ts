@@ -5,7 +5,7 @@ import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
-import type { MdxJsxFlowElementHast } from "mdast-util-mdx-jsx";
+import type { MdxJsxFlowElementHast, MdxJsxTextElementHast } from "mdast-util-mdx-jsx";
 
 import { appendStyle, getExtension } from "./utils/index.js";
 import {
@@ -130,7 +130,7 @@ const isAudioExt = (ext: string) => audioExtensions.indexOf(ext) >= 0;
 /**
  *
  * `rehype-image-hack` enhances markdown image syntax and MDX media elements (img, audio, video) by;
- *  - adding attributes,
+ *  - adding style and attributes,
  *  - adding figure captions,
  *  - auto-linking images to originals,
  *  - converting images to video/audio based on the file extension
@@ -156,6 +156,40 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     { wrapper: "bracket", regex: /\[.*\]/ },
     { wrapper: "parenthesis", regex: /\(.*\)/ },
   ] as const;
+
+  function isFigureElement(
+    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is Element {
+    return node.type === "element" && node.tagName === "figure";
+  }
+
+  function isAnchorElement(
+    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is Element {
+    return node.type === "element" && node.tagName === "a";
+  }
+
+  function isParagraphElement(node: RootContent): node is Element {
+    return node.type === "element" && node.tagName === "p";
+  }
+
+  function isMdxJsxElement(
+    node: Root | ElementContent | undefined,
+  ): node is MdxJsxFlowElementHast | MdxJsxTextElementHast {
+    return node?.type === "mdxJsxTextElement" || node?.type === "mdxJsxFlowElement";
+  }
+
+  function isAnchorMdxJsxElement(
+    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | undefined,
+  ): boolean {
+    return isMdxJsxElement(node) && node.name === "a";
+  }
+
+  function isFigureMdxJsxElement(
+    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | undefined,
+  ): boolean {
+    return isMdxJsxElement(node) && node.name === "figure";
+  }
 
   // TODO: support svg
   // look at https://www.npmjs.com/package/hast-util-properties-to-mdx-jsx-attributes
@@ -193,7 +227,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         };
 
         if (startsWith.plus || startsWith.star || startsWith.caption) {
-          const isFigureParent = parent.type === "element" && parent.tagName === "figure";
+          const isFigureParent = isFigureElement(parent);
           if (!isFigureParent) node.properties.markedAsToBeInFigure = true;
 
           const figcaptionText =
@@ -222,7 +256,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               fileLinkRegex.test(src);
 
             if (node.tagName === "img" && isValidAutolink) {
-              const isAnchorParent = parent.type === "element" && parent.tagName === "a";
+              const isAnchorParent = isAnchorElement(parent);
               const isFigurable = node.properties.markedAsToBeInFigure;
 
               if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
@@ -287,10 +321,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           };
 
           if (startsWith.plus || startsWith.star || startsWith.caption) {
-            const isFigureParent =
-              (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
-              parent.name === "figure";
-
+            const isFigureParent = isFigureMdxJsxElement(parent);
             if (!isFigureParent) node.data.markedAsToBeInFigure = true;
 
             const figcaptionText =
@@ -323,11 +354,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 fileLinkRegex.test(src);
 
               if (node.name === "img" && isValidAutolink) {
-                const isAnchorParent =
-                  (parent.type === "mdxJsxFlowElement" ||
-                    parent.type === "mdxJsxTextElement") &&
-                  parent.name === "a";
-
+                const isAnchorParent = isAnchorMdxJsxElement(parent);
                 const isFigurable = node.data?.markedAsToBeInFigure;
 
                 if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
@@ -385,12 +412,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // filter empty paragraphs
       const filtered = newNodes.filter((n) => {
-        return !(n.type === "element" && n.tagName === "p" && n.children.every(whitespace));
+        return !(isParagraphElement(n) && n.children.every(whitespace));
       });
 
       // trim the text on edges
       filtered.forEach((n) => {
-        n.type === "element" && n.tagName === "p" && trimParagraphEdges(n);
+        isParagraphElement(n) && trimParagraphEdges(n);
       });
 
       // insert new line between each nodes
@@ -462,8 +489,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       }
 
       function isRelevantMdxJsxElement(element: ElementContent) {
-        if (element.type !== "mdxJsxFlowElement" && element.type !== "mdxJsxTextElement")
-          return false;
+        if (!isMdxJsxElement(element)) return false;
 
         const isVideo = element.name === "video";
         const isAudio = element.name === "audio";
@@ -475,7 +501,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           element.name === "a" &&
           element.children.some((child) => {
             return (
-              (child.type === "mdxJsxFlowElement" || child.type === "mdxJsxTextElement") &&
+              isMdxJsxElement(child) &&
               ((child.name === "img" && isMarkedMdxJsxElement(child)) ||
                 child.name === "video" ||
                 child.name === "audio" ||
@@ -660,16 +686,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const marker = node.properties.markedAsToBeAutoLinked;
         node.properties.markedAsToBeAutoLinked = undefined;
 
-        const isFigureParent = parent.type === "element" && parent.tagName === "figure";
-
+        const isFigureParent = isFigureElement(parent);
         if (isFigureParent && marker === "bracket") {
           // find the parent index so as the anchor covers the parent
           visitParents(tree, "element", function (targetNode, ancestors) {
             if (targetNode !== parent) return;
 
             const grandparent = ancestors.at(-1);
-            const isGrandparentAnchor =
-              grandparent?.type === "element" && grandparent.tagName === "a";
 
             if (
               !grandparent ||
@@ -681,6 +704,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             }
 
             const parentIndex = grandparent.children.indexOf(parent);
+            const isGrandparentAnchor = isAnchorElement(grandparent);
+
             if (parentIndex !== -1 && !isGrandparentAnchor) {
               grandparent.children.splice(parentIndex, 1, {
                 type: "element",
@@ -935,8 +960,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const marker = node.data.markedAsToBeAutoLinked;
           node.data.markedAsToBeAutoLinked = undefined;
 
-          const isFigureParent =
-            parent.type === "mdxJsxFlowElement" && parent.name === "figure";
+          const isFigureParent = isFigureMdxJsxElement(parent);
 
           if (isFigureParent && marker === "bracket") {
             // find the parent index so as the anchor covers the parent
@@ -944,8 +968,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               if (targetNode !== parent) return;
 
               const grandparent = ancestors.at(-1);
-              const isGrandparentAnchor =
-                grandparent?.type === "mdxJsxFlowElement" && grandparent.name === "a";
 
               if (
                 !grandparent ||
@@ -957,6 +979,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               }
 
               const parentIndex = grandparent.children.indexOf(parent);
+              const isGrandparentAnchor = isAnchorMdxJsxElement(grandparent);
+
               if (parentIndex !== -1 && !isGrandparentAnchor) {
                 grandparent.children.splice(parentIndex, 1, {
                   type: "mdxJsxFlowElement",
