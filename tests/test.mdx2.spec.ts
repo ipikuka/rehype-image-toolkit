@@ -12,20 +12,17 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
       ![](image.png)
 
-      <img src="image.png" alt="" />
+      <img src="image.png" alt=""/>
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+    const output = `
       "<h2>Hi</h2>
       <p><img src="image.png" alt=""/></p>
       <img src="image.png" alt=""/>"
-    `);
+    `;
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<h2>Hi</h2>
-      <p><img src="image.png" alt=""/></p>
-      <img src="image.png" alt=""/>"
-    `);
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
@@ -37,18 +34,18 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
       handle ![]([image.png]) ![]((image.png)) in a paragraph
 
-      <img src="[image.png]" alt="" />
+      <img src="[image.png]" alt=""/>
 
-      <img src="(image.png)" alt="" />
+      <img src="(image.png)" alt=""/>
 
-      <img src="[image.png]" alt="" /> text
+      <img src="[image.png]" alt=""/> text
 
-      <img src="(image.png)" alt="" /> text
+      <img src="(image.png)" alt=""/> text
 
-      handle <img src="[image.png]" alt="" /> <img src="(image.png)" alt="" /> in a paragraph
+      handle <img src="[image.png]" alt=""/> <img src="(image.png)" alt=""/> in a paragraph
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+    const output = `
       "<p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
       <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
@@ -57,18 +54,10 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
       <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>"
-    `);
+    `;
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
-      <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></p>
-      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>
-      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
-      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
-      <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
-      <p><a href="image.png" target="_blank"><img src="image.png" alt=""/></a> text</p>
-      <p>handle <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> <a href="image.png" target="_blank"><img src="image.png" alt=""/></a> in a paragraph</p>"
-    `);
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
@@ -80,14 +69,14 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       [![*Caption]([image.png])](https://example.com)
       [![*Caption]((image.png))](https://example.com)
 
-      <a href="https://example.com"><img src="[image.png]" alt="" /></a>
-      <a href="https://example.com"><img src="(image.png)" alt="" /></a>
+      <a href="https://example.com"><img src="[image.png]" alt=""/></a>
+      <a href="https://example.com"><img src="(image.png)" alt=""/></a>
 
-      here is the image <a href="https://example.com"><img src="[image.png]" alt="" /></a>
-      here is the image <a href="https://example.com"><img src="(image.png)" alt="" /></a>
+      here is the image <a href="https://example.com"><img src="[image.png]" alt=""/></a>
+      here is the image <a href="https://example.com"><img src="(image.png)" alt=""/></a>
 
-      <a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a>
-      <a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a>
+      <a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a>
+      <a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
@@ -117,130 +106,86 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO
+  // TODO handle if the grandparent is already a figure element, the last couple
   // ******************************************
   it("MDX source, autolinks && caption already in a link and/or a figure - 2", async () => {
     const input = dedent`
       <a href="https://example.com">
-        <figure><img src="[image.png]" alt="" /></figure>
+        <figure><img src="[image.png]" alt=""/></figure>
       </a>
       <a href="https://example.com">
-        <figure><img src="(image.png)" alt="" /></figure>
+        <figure><img src="(image.png)" alt=""/></figure>
       </a>
       
-      <figure><a href="https://example.com"><img src="[image.png]" alt="" /></a></figure>
-      <figure><a href="https://example.com"><img src="(image.png)" alt="" /></a></figure>
+      <figure><a href="https://example.com"><img src="[image.png]" alt=""/></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt=""/></a></figure>
 
       <a href="https://example.com">
-        <figure><img src="[image.png]" alt="*Caption" /></figure>
+        <figure><img src="[image.png]" alt="*Caption"/></figure>
       </a>
       <a href="https://example.com">
-        <figure><img src="(image.png)" alt="*Caption" /></figure>
+        <figure><img src="(image.png)" alt="*Caption"/></figure>
       </a>
       
-      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a></figure>
-      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a></figure>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a></figure>
     `;
 
-    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
-      .toMatchInlineSnapshot(`
-      "<p><a href="https://example.com"></a></p>
-      <figure>
-        <a href="https://example.com"><img src="image.png" alt="" /></a>
-      </figure>
-      <figure>
-        <a href="https://example.com"><img src="image.png" alt="" /></a>
-      </figure>
-      <p><a href="https://example.com"></a></p>
-      <figure>
-        <a href="https://example.com"><img src="image.png" alt="" /></a>
-      </figure>
-      <figure>
-        <a href="https://example.com"><img src="image.png" alt="" /></a>
-      </figure>
-      <p><a href="https://example.com"></a></p>
-      <figure>
-        <a href="https://example.com"
-          ><figure>
-            <img src="image.png" alt="Caption" />
-            <figcaption>Caption</figcaption>
-          </figure></a
-        >
-      </figure>
-      <figure>
-        <a href="https://example.com"
-          ><figure>
-            <img src="image.png" alt="Caption" />
-            <figcaption>Caption</figcaption>
-          </figure></a
-        >
-      </figure>
-      <p><a href="https://example.com"></a></p>
-      <figure>
-        <a href="https://example.com"
-          ><figure>
-            <a href="image.png" target="_blank"
-              ><img src="image.png" alt="Caption"
-            /></a>
-            <figcaption>Caption</figcaption>
-          </figure></a
-        >
-      </figure>
-      <figure>
-        <a href="https://example.com"
-          ><figure>
-            <a href="image.png" target="_blank"
-              ><img src="image.png" alt="Caption"
-            /></a>
-            <figcaption>Caption</figcaption>
-          </figure></a
-        >
-      </figure>
-      "
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<a href="https://example.com">
+        <figure><img src="image.png" alt=""/></figure>
+      </a>
+      <a href="https://example.com">
+        <figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure>
+      </a>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <a href="https://example.com">
+        <figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure>
+      </a>
+      <a href="https://example.com">
+        <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure>
+      </a>
+      <figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
+      <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
     `);
 
-    // expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot();
-
-    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure></a>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>
+      <figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
+      <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
+    `);
   });
 
-  // TODO second and third part
   // ******************************************
-  it.only("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
+  it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
     const input = dedent`
-      <figure><img src="https://example.com" alt="+Caption" /></figure>
-      <figure><img src="https://example.com" alt="*Caption" /></figure>
+      <figure><img src="image.png" alt="+Caption"/></figure>
+      <figure><img src="image.png" alt="*Caption"/></figure>
 
-      <figure><img src="[https://example.com]" alt="+Caption" /></figure>
-      <figure><img src="[https://example.com]" alt="*Caption" /></figure>
+      <figure><img src="[image.png]" alt="+Caption"/></figure>
+      <figure><img src="[image.png]" alt="*Caption"/></figure>
       
-      <figure><img src="(https://example.com)" alt="+Caption" /></figure>
-      <figure><img src="(https://example.com)" alt="*Caption" /></figure>
+      <figure><img src="(image.png)" alt="+Caption"/></figure>
+      <figure><img src="(image.png)" alt="*Caption"/></figure>
     `;
 
-    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
-      .toMatchInlineSnapshot(`
-      "<figure><img src="https://example.com" alt="Caption" /></figure>
-      <figure>
-        <img src="https://example.com" alt="Caption" />
-        <figcaption>Caption</figcaption>
-      </figure>
-      <figure><img src="https://example.com" alt="Caption" /></figure>
-      <figure>
-        <img src="https://example.com" alt="Caption" />
-        <figcaption>Caption</figcaption>
-      </figure>
-      <figure><img src="https://example.com" alt="Caption" /></figure>
-      <figure>
-        <img src="https://example.com" alt="Caption" />
-        <figcaption>Caption</figcaption>
-      </figure>
-      "
-    `);
+    const output = `
+      "<figure><img src="image.png" alt="Caption"/></figure>
+      <figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/></figure></a>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a></figure>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure>"
+    `;
 
-    // expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot();
-
-    // expect(await processMdx(input, "mdx")).toMatchInlineSnapshot();
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
@@ -252,30 +197,24 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
       ![caption:Hello](image.png)
 
-      <img src="image.png" alt="+Hello" />
+      <img src="image.png" alt="+Hello"/>
 
-      <img src="image.png" alt="*Hello" />
+      <img src="image.png" alt="*Hello"/>
 
-      <img src="image.png" alt="caption:Hello" />
+      <img src="image.png" alt="caption:Hello"/>
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+    const output = `
       "<figure><img src="image.png" alt="Hello"/></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
       <figure><img src="image.png" alt="Hello"/></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>"
-    `);
+    `;
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<figure><img src="image.png" alt="Hello"/></figure>
-      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
-      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
-      <figure><img src="image.png" alt="Hello"/></figure>
-      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
-      <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>"
-    `);
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
@@ -287,11 +226,11 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
       ![caption:Hello](video.mp4)
 
-      <img src="video.mp4" alt="+Hello" />
+      <img src="video.mp4" alt="+Hello"/>
 
-      <img src="video.mp4" alt="*Hello" />
+      <img src="video.mp4" alt="*Hello"/>
 
-      <img src="video.mp4" alt="caption:Hello" />
+      <img src="video.mp4" alt="caption:Hello"/>
 
       <video src="video.mp4" alt="+Hello"></video>
 
@@ -300,7 +239,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <video src="video.mp4" alt="caption:Hello"></video>
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+    const output = `
       "<figure><video><source src="video.mp4" type="video/mp4"/></video></figure>
       <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
       <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
@@ -310,19 +249,10 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <figure><video src="video.mp4"></video></figure>
       <figure><video src="video.mp4"></video><figcaption>Hello</figcaption></figure>
       <figure><video src="video.mp4"></video><figcaption>Hello</figcaption></figure>"
-    `);
+    `;
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<figure><video><source src="video.mp4" type="video/mp4"/></video></figure>
-      <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
-      <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
-      <figure><video><source src="video.mp4" type="video/mp4"/></video></figure>
-      <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
-      <figure><video><source src="video.mp4" type="video/mp4"/></video><figcaption>Hello</figcaption></figure>
-      <figure><video src="video.mp4"></video></figure>
-      <figure><video src="video.mp4"></video><figcaption>Hello</figcaption></figure>
-      <figure><video src="video.mp4"></video><figcaption>Hello</figcaption></figure>"
-    `);
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
@@ -334,11 +264,11 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
       ![caption:Hello](audio.mp3)
 
-      <img src="audio.mp3" alt="+Hello" />
+      <img src="audio.mp3" alt="+Hello"/>
 
-      <img src="audio.mp3" alt="*Hello" />
+      <img src="audio.mp3" alt="*Hello"/>
 
-      <img src="audio.mp3" alt="caption:Hello" />
+      <img src="audio.mp3" alt="caption:Hello"/>
 
       <audio src="audio.mp3" alt="+Hello"></audio>
 
@@ -347,7 +277,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <audio src="audio.mp3" alt="caption:Hello"></audio>
     `;
 
-    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+    const output = `
       "<figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio></figure>
       <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
       <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
@@ -357,128 +287,61 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <figure><audio src="audio.mp3"></audio></figure>
       <figure><audio src="audio.mp3"></audio><figcaption>Hello</figcaption></figure>
       <figure><audio src="audio.mp3"></audio><figcaption>Hello</figcaption></figure>"
-    `);
+    `;
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio></figure>
-      <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
-      <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
-      <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio></figure>
-      <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
-      <figure><audio><source src="audio.mp3" type="audio/mpeg"/></audio><figcaption>Hello</figcaption></figure>
-      <figure><audio src="audio.mp3"></audio></figure>
-      <figure><audio src="audio.mp3"></audio><figcaption>Hello</figcaption></figure>
-      <figure><audio src="audio.mp3"></audio><figcaption>Hello</figcaption></figure>"
-    `);
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
   it("MDX source, handle adding attributes utilizing title attribute", async () => {
     const input = dedent`
       ![](image.png "title > width=2rem height=1rem")
-      <img src="image.png" alt="" title="title > width=2rem height=1rem" />
+      <img src="image.png" alt="" title="title > width=2rem height=1rem"/>
 
       ![](image.png "> 400x300 loading=lazy")
-      <img src="image.png" alt="" title="> 400x300 loading=lazy" />
+      <img src="image.png" alt="" title="> 400x300 loading=lazy"/>
 
       ![](image.png "title > 50%x3rem")
-      <img src="image.png" alt="" title="title > 50%x3rem" />
+      <img src="image.png" alt="" title="title > 50%x3rem"/>
 
       ![](video.mp4 "title > width=200 height=100 muted")
-      <img src="video.mp4" alt="" title="title > width=200 height=100 muted" />
+      <img src="video.mp4" alt="" title="title > width=200 height=100 muted"/>
       <video src="video.mp4" alt="" title="title > width=200 height=100 muted"></video>
 
       ![](audio.mp3 "title > #audio-id .audio-class autoplay")
-      <img src="audio.mp3" alt="" title="title > #audio-id .audio-class autoplay" />
+      <img src="audio.mp3" alt="" title="title > #audio-id .audio-class autoplay"/>
       <audio src="audio.mp3" alt="" title="title > #audio-id .audio-class autoplay"></audio>
     `;
 
-    expect(await prettier.format(await processMdxRaw(input, "md"), { parser: "html" }))
-      .toMatchInlineSnapshot(`
-      "<p>
-        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
-        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
-      </p>
-      <p>
-        <img src="image.png" alt="" width="400" height="300" loading="lazy" />
-        <img src="image.png" alt="" width="400" height="300" loading="lazy" />
-      </p>
-      <p>
-        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
-        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
-      </p>
-      <video title="title" width="200" height="100" muted="">
-        <source src="video.mp4" type="video/mp4" />
-      </video>
-      <video title="title" width="200" height="100" muted="">
-        <source src="video.mp4" type="video/mp4" />
-      </video>
-      <video
-        src="video.mp4"
-        alt=""
-        title="title"
-        width="200"
-        height="100"
-        muted=""
-      ></video>
-      <audio title="title" id="audio-id" class="audio-class" autoplay="">
-        <source src="audio.mp3" type="audio/mpeg" />
-      </audio>
-      <audio title="title" id="audio-id" class="audio-class" autoplay="">
-        <source src="audio.mp3" type="audio/mpeg" />
-      </audio>
-      <audio
-        src="audio.mp3"
-        alt=""
-        title="title"
-        id="audio-id"
-        class="audio-class"
-        autoplay=""
-      ></audio>
-      "
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/>
+      <img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/></p>
+      <p><img src="image.png" alt="" width="400" height="300" loading="lazy"/>
+      <img src="image.png" alt="" width="400" height="300" loading="lazy"/></p>
+      <p><img src="image.png" alt="" title="title" style="width:50%;height:3rem"/>
+      <img src="image.png" alt="" title="title" style="width:50%;height:3rem"/></p>
+      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
+      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
+      <video src="video.mp4" alt="" title="title" width="200" height="100" muted=""></video>
+      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <audio src="audio.mp3" alt="" title="title" id="audio-id" class="audio-class" autoplay=""></audio>"
     `);
 
-    expect(await prettier.format(await processMdx(input, "mdx"), { parser: "html" }))
-      .toMatchInlineSnapshot(`
-      "<p>
-        <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
-      </p>
-      <img src="image.png" alt="" title="title" style="width: 2rem; height: 1rem" />
-      <p><img src="image.png" alt="" width="400" height="300" loading="lazy" /></p>
-      <img src="image.png" alt="" width="400" height="300" loading="lazy" />
-      <p>
-        <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
-      </p>
-      <img src="image.png" alt="" title="title" style="width: 50%; height: 3rem" />
-      <video title="title" width="200" height="100" muted="">
-        <source src="video.mp4" type="video/mp4" />
-      </video>
-      <video title="title" width="200" height="100" muted="">
-        <source src="video.mp4" type="video/mp4" />
-      </video>
-      <video
-        src="video.mp4"
-        alt=""
-        title="title"
-        width="200"
-        height="100"
-        muted=""
-      ></video>
-      <audio title="title" id="audio-id" class="audio-class" autoplay="">
-        <source src="audio.mp3" type="audio/mpeg" />
-      </audio>
-      <audio title="title" id="audio-id" class="audio-class" autoplay="">
-        <source src="audio.mp3" type="audio/mpeg" />
-      </audio>
-      <audio
-        src="audio.mp3"
-        alt=""
-        title="title"
-        id="audio-id"
-        class="audio-class"
-        autoplay=""
-      ></audio>
-      "
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/></p>
+      <img src="image.png" alt="" title="title" style="width:2rem;height:1rem"/>
+      <p><img src="image.png" alt="" width="400" height="300" loading="lazy"/></p>
+      <img src="image.png" alt="" width="400" height="300" loading="lazy"/>
+      <p><img src="image.png" alt="" title="title" style="width:50%;height:3rem"/></p>
+      <img src="image.png" alt="" title="title" style="width:50%;height:3rem"/>
+      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
+      <video title="title" width="200" height="100" muted=""><source src="video.mp4" type="video/mp4"/></video>
+      <video src="video.mp4" alt="" title="title" width="200" height="100" muted=""></video>
+      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <audio title="title" id="audio-id" class="audio-class" autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <audio src="audio.mp3" alt="" title="title" id="audio-id" class="audio-class" autoplay=""></audio>"
     `);
   });
 
@@ -512,11 +375,12 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     expect(await processMdx(inputMdx, "mdx")).toMatchInlineSnapshot(output);
   });
 
+  // TODO handle if the grandparent is already a figure element
   // ******************************************
-  it.only("xxx", async () => {
+  it("fix", async () => {
     const input = dedent`
-      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption" /></a></figure>
-      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption" /></a></figure>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a></figure>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
