@@ -163,6 +163,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
   const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
 
+  const SRC_WRAPPERS: {
+    wrapper: "bracket" | "parenthesis";
+    regex: RegExp;
+  }[] = [
+    { wrapper: "bracket", regex: /\[.*\]/ },
+    { wrapper: "parenthesis", regex: /\(.*\)/ },
+  ] as const;
+
   // TODO: support svg
   // look at https://www.npmjs.com/package/hast-util-properties-to-mdx-jsx-attributes
 
@@ -190,6 +198,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding figure and caption *****************************
 
       const alt = node.properties.alt;
+
       if (alt) {
         const startsWith = {
           plus: alt.startsWith("+"),
@@ -211,26 +220,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // Preparation part for adding autolink ***************************************
 
-      // const src = decodeURI(String(node.properties.src));
+      const src_ = node.properties.src;
+      let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
 
-      let src = node.properties.src;
       if (src) {
-        const wrappers: {
-          wrapper: "bracket" | "parenthesis";
-          raw: RegExp;
-          encoded: RegExp;
-        }[] = [
-          { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
-          { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
-        ];
-
-        for (const { wrapper, raw, encoded } of wrappers) {
-          const isRaw = raw.test(src);
-          const isEncoded = !isRaw && encoded.test(src);
-
-          if (isRaw || isEncoded) {
-            const sliceAmount = isRaw ? 1 : 3;
-            src = src.slice(sliceAmount, -sliceAmount);
+        for (const { wrapper, regex } of SRC_WRAPPERS) {
+          if (regex.test(src)) {
+            src = src.slice(1, -1);
             node.properties.src = src;
 
             const isValidAutolink =
@@ -257,6 +253,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       const extension = getExtension(node.properties.src);
       const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+
       if (needsConversion && node.tagName === "img") {
         node.properties.markedAsToBeConverted = true;
         node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
@@ -285,21 +282,18 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
-        // to start collecting data with empty object
+        // start collecting data with empty object
         node.data ??= {};
 
         // Preparation part for adding figure and caption *****************************
-
-        const isFigureParent =
-          (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
-          parent.name === "figure";
 
         const altAttribute = node.attributes.find(
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
         );
 
-        if (altAttribute && typeof altAttribute.value === "string") {
-          const alt = altAttribute.value;
+        const alt = typeof altAttribute?.value === "string" ? altAttribute.value : undefined;
+
+        if (altAttribute && alt) {
           const startsWith = {
             plus: alt.startsWith("+"),
             star: alt.startsWith("*"),
@@ -307,6 +301,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           };
 
           if (startsWith.plus || startsWith.star || startsWith.caption) {
+            const isFigureParent =
+              (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
+              parent.name === "figure";
+
             if (!isFigureParent) node.data.markedAsToBeInFigure = true;
 
             const figcaptionText =
@@ -319,32 +317,17 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for adding autolink ***************************************
 
-        const isAnchorParent =
-          (parent.type === "mdxJsxFlowElement" || parent.type === "mdxJsxTextElement") &&
-          parent.name === "a";
-
         const srcAttribute = node.attributes.find(
           (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
         );
 
-        if (srcAttribute && typeof srcAttribute.value === "string") {
-          let src = srcAttribute.value;
-          const wrappers: {
-            wrapper: "bracket" | "parenthesis";
-            raw: RegExp;
-            encoded: RegExp;
-          }[] = [
-            { wrapper: "bracket", raw: /\[.*\]/, encoded: /%5B.*%5D/ },
-            { wrapper: "parenthesis", raw: /\(.*\)/, encoded: /%28.*%29/ },
-          ];
+        const src_ = typeof srcAttribute?.value === "string" ? srcAttribute.value : undefined;
+        let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
 
-          for (const { wrapper, raw, encoded } of wrappers) {
-            const isRaw = raw.test(src);
-            const isEncoded = !isRaw && encoded.test(src);
-
-            if (isRaw || isEncoded) {
-              const sliceAmount = isRaw ? 1 : 3;
-              src = src.slice(sliceAmount, -sliceAmount);
+        if (srcAttribute && src) {
+          for (const { wrapper, regex } of SRC_WRAPPERS) {
+            if (regex.test(src)) {
+              src = src.slice(1, -1);
               srcAttribute.value = src;
 
               const isValidAutolink =
@@ -354,7 +337,13 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 fileLinkRegex.test(src);
 
               if (node.name === "img" && isValidAutolink) {
+                const isAnchorParent =
+                  (parent.type === "mdxJsxFlowElement" ||
+                    parent.type === "mdxJsxTextElement") &&
+                  parent.name === "a";
+
                 const isFigurable = node.data?.markedAsToBeInFigure;
+
                 if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
                   node.data.markedAsToBeAutoLinked = wrapper;
                 }
@@ -365,16 +354,18 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
 
         // Preparation part for convertion to video/audio ****************************
+
         if (srcAttribute && typeof srcAttribute.value === "string") {
           const extension = getExtension(srcAttribute.value);
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+
           if (needsConversion && node.name === "img") {
             node.data.markedAsToBeConverted = true;
             node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
           }
         }
 
-        // if `node.data` is empty than set it as undefined
+        // if `node.data` is still empty than set it as undefined
         if (Object.keys(node.data).length === 0) {
           node.data = undefined;
         }
