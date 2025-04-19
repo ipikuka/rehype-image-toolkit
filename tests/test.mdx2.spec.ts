@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import dedent from "dedent";
-import * as prettier from "prettier";
+// import * as prettier from "prettier";
 
 import { processMdx, processMdxRaw } from "./util/index.mdx";
 
@@ -186,6 +186,37 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
     expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
+  });
+
+  // ******************************************
+  it("MDX source, autolinks && caption already in a link and/or a figure - 3, figcaption is above", async () => {
+    const input = dedent`
+      <figure><img src="image.png" alt="+Caption"/></figure>
+      <figure><img src="image.png" alt="*Caption"/></figure>
+
+      <figure><img src="[image.png]" alt="+Caption"/></figure>
+      <figure><img src="[image.png]" alt="*Caption"/></figure>
+      
+      <figure><img src="(image.png)" alt="+Caption"/></figure>
+      <figure><img src="(image.png)" alt="*Caption"/></figure>
+    `;
+
+    const output = `
+      "<figure><img src="image.png" alt="Caption"/></figure>
+      <figure><figcaption>Caption</figcaption><img src="image.png" alt="Caption"/></figure>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/></figure></a>
+      <a href="image.png" target="_blank"><figure><figcaption>Caption</figcaption><img src="image.png" alt="Caption"/></figure></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a></figure>
+      <figure><figcaption>Caption</figcaption><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a></figure>"
+    `;
+
+    expect(
+      await processMdxRaw(input, "md", { figureCaptionPosition: "above" }),
+    ).toMatchInlineSnapshot(output);
+
+    expect(
+      await processMdx(input, "mdx", { figureCaptionPosition: "above" }),
+    ).toMatchInlineSnapshot(output);
   });
 
   // ******************************************
