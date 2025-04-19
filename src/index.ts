@@ -5,9 +5,9 @@ import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
-
 import type { MdxJsxFlowElementHast } from "mdast-util-mdx-jsx";
-import { appendStyle } from "./utils/index.js";
+
+import { appendStyle, getExtension } from "./utils/index.js";
 import {
   composeAttributeValueExpressionLiteral,
   composeAttributeValueExpressionStyle,
@@ -126,20 +126,6 @@ const audioExtensions = Object.keys(audioMimeTypes);
 
 const isVideoExt = (ext: string) => videoExtensions.indexOf(ext) >= 0;
 const isAudioExt = (ext: string) => audioExtensions.indexOf(ext) >= 0;
-
-/**
- *
- * Function to get the file extension from a link / source
- *
- */
-const getExtension = (src: string | undefined): string | undefined => {
-  // Match the file extension; consider may has a trailing query or hash
-  const RE = /\.([a-zA-Z0-9]+)(?=[?#]|$)/i;
-
-  const match = src?.match(RE);
-
-  return match?.[1];
-};
 
 /**
  *

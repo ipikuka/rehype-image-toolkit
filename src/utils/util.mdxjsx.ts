@@ -8,8 +8,6 @@ import type {
   MdxJsxExpressionAttribute,
 } from "mdast-util-mdx-jsx";
 
-import { toObjectLiteral } from "./index.js";
-
 export function updateOrAddMdxAttribute(
   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
   name: string,
@@ -69,7 +67,7 @@ export function updateOrAddMdxAttribute(
   }
 }
 
-export function program(body: Program["body"]): Program {
+function program(body: Program["body"]): Program {
   return {
     type: "Program",
     body: body,
@@ -97,6 +95,12 @@ export function composeAttributeValueExpressionLiteral(
       ]),
     },
   };
+}
+
+function toObjectLiteral(obj: Record<string, unknown>): string {
+  return `{${Object.entries(obj)
+    .map(([key, value]) => `${key}:${JSON.stringify(value)}`)
+    .join(",")}}`;
 }
 
 export function composeAttributeValueExpressionStyle(

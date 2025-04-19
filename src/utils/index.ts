@@ -1,7 +1,10 @@
-export function toObjectLiteral(obj: Record<string, unknown>): string {
-  return `{${Object.entries(obj)
-    .map(([key, value]) => `${key}:${JSON.stringify(value)}`)
-    .join(",")}}`;
+export function getExtension(src: string | undefined): string | undefined {
+  // consider also it may has a trailing query or hash
+  const RE = /\.([a-zA-Z0-9]+)(?=[?#]|$)/i;
+
+  const match = src?.match(RE);
+
+  return match?.[1];
 }
 
 export function ensureSemiColon(str: string) {
