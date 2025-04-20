@@ -417,9 +417,55 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     expect(await processMdx(inputMdx, "mdx")).toMatchInlineSnapshot(output);
   });
 
+  // ******************************************
+  it("handle attribute value expressions in MDX - 1", async () => {
+    const input = dedent`
+      <img src={"image.png"}/>
+      <img src={"image.png"} alt={""}/>
+      <img src={"image.png"} alt={"+Caption"}/>
+      <img src={"image.png"} alt={"*Caption"}/>
+      <img src={"(image.png)"} alt={""}/>
+      <img src={"(image.png)"} alt={"+Caption"}/>
+      <img src={"(image.png)"} alt={"*Caption"}/>
+      <img src={"[image.png]"} alt={""}/>
+      <img src={"[image.png]"} alt={"+Caption"}/>
+      <img src={"[image.png]"} alt={"*Caption"}/>
+    `;
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<img src="image.png"/>
+      <img src="image.png" alt=""/>
+      <figure><img src="image.png" alt="Caption"/></figure>
+      <figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a></figure>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/></figure></a>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>"
+    `);
+  });
+
+  // ******************************************
+  it("handle attribute value expressions in MDX - 2", async () => {
+    const input = dedent`
+      <img src={"image.png"} className={"ex1"} alt={""} title={"title > .new"}/>
+      <img src={"image.png"} className={"ex1 ex2"} alt={""} title={"title > .new"}/>
+      <img src={"image.png"} loading={"eager"} title={"title > loading=lazy download"}/>
+      <video src={"video.mp4"} controls title={"title > controls=undefined"}/>
+    `;
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<img src="image.png" class="ex1 new" alt="" title="title"/>
+      <img src="image.png" class="ex1 ex2 new" alt="" title="title"/>
+      <img src="image.png" loading="lazy" title="title" download=""/>
+      <video src="video.mp4" title="title"></video>"
+    `);
+  });
+
   // TODO handle if the grandparent is already a figure element
   // ******************************************
-  it("fix", async () => {
+  it("fix it !", async () => {
     const input = dedent`
       <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a></figure>
       <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a></figure>
