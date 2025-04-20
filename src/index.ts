@@ -401,7 +401,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // Preparation part for convertion to video/audio ****************************
 
         if (srcAttribute) {
-          const [_, src] = getAttributeValue(srcAttribute);
+          const src = getAttributeValue(srcAttribute)[1];
 
           const extension = typeof src === "string" ? getExtension(src) : undefined;
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
