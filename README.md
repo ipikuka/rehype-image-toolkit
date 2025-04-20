@@ -18,7 +18,7 @@ Markdown natively supports images but lacks built-in syntax for videos and audio
 
 As far as I can see, other Remark/Rehype plugins related with markdown images apply their features to all images within the content without offering selectivity. For example, I may not want every image to be wrapped in a `<figure>` element, have a caption, or be automatically linked to its original source. In some cases, I need certain images to be excluded from these transformations.
 
-That's why I ensured that each feature could be controlled individually through directives **`rehype-image-hack`**. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one"** approach to provide all the essential features related to Markdown image syntax in a single solution.
+That's why I ensured that each feature could be controlled individually through directives **`rehype-image-hack`**. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to Markdown image syntax in a single solution.
 
 **`rehype-image-hack`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
@@ -45,11 +45,11 @@ yarn add rehype-image-hack
 Say we have the following markdown file, `example.md`:
 
 ```markdown
-It converts images to audio/videos. ![](video.mp4) 
+It ensures adding videos/audio using image syntax. ![](video.mp4) 
 
-It adds autolink. ![alt]([https://example.com/image.png])
+It adds autolink to original. ![alt]([https://example.com/image.png])
 
-It adds caption. ![*Image Caption](image.png)
+It wraps with figure and adds caption. ![*Image Caption](image.png)
 
 It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
 ```
@@ -81,17 +81,17 @@ async function main() {
 Now, running `node example.js` you will see.
 
 ```html
-<p>It converts images to audio/videos.</p>
+<p>It ensures adding videos/audio using image syntax.</p>
 <video>
   <source src="video.mp4" type="video/mp4" />
 </video>
 <p>
-  It adds autolink.
+  It adds autolink to original.
   <a href="https://example.com/image.png" target="_blank">
     <img src="https://example.com/image.png" alt="alt"/>
   </a>
 </p>
-<p>It adds caption.</p>
+<p>It wraps with figure and adds caption.</p>
 <figure>
   <img src="image.png" alt="Image Caption" />
   <figcaption>Image Caption</figcaption>
@@ -106,13 +106,13 @@ Without `rehype-image-hack` the output would be:
 
 ```html
 <p>
-  It converts images to audio/videos. <img src="video.mp4" alt="" />
+  It ensures adding videos/audio using image syntax. <img src="video.mp4" alt="" />
 </p>
 <p>
-  It adds autolink. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
+  It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
 </p>
 <p>
-  It adds caption. <img src="image.png" alt="*Image Caption" />
+  It wraps with figure and adds caption. <img src="image.png" alt="*Image Caption" />
 </p>
 <p>
   It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay" />
@@ -127,11 +127,11 @@ Say `example.html` looks as follows:
 
 ```html
 <p>
-  It adds autolink.
+  It adds autolink to original.
   <img src="[https://example.com/image.png]" alt="alt"/>
 </p>
 <p>
-  It adds caption.
+  It wraps with figure and adds caption.
   <img src="image.png" alt="*Image Caption"/>
 </p>
 <p>
@@ -166,13 +166,18 @@ Now, running `node example.js` you will see.
 
 ```html
 <p>
-  It adds autolink.
-  <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a>
+  It adds autolink to original.
+  <a href="https://example.com/image.png" target="_blank">
+    <img src="https://example.com/image.png" alt="alt">
+  </a>
 </p>
 <p>
-  It adds caption.
+  It wraps with figure and adds caption.
 </p>
-<figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
+<figure>
+  <img src="image.png" alt="Image Caption">
+  <figcaption>Image Caption</figcaption>
+</figure>
 <p>
   It adds attributes.
   <img src="image.png" title="title" width="60" height="60">
@@ -237,7 +242,7 @@ Yo can use `px` or just number for example `320` or `320px`. The CSS units other
 ![image alt](foo.jpg "> #id .class width=30px height=20px")
 ```
 
-**There is a simple syntax for width and hight, using lowercase "x" character between**.\
+**There is a simple syntax for width and hight, using lowercase "x" character in the middle**.\
 *In this syntax, the pixel units should be a number, do not use `px`.*
 
 ```markdown
