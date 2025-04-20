@@ -28,28 +28,28 @@ declare module "hast" {
     src?: string;
     title?: string;
     alt?: string;
-    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
-    markedAsToBeInFigure?: boolean;
-    captionInFigure?: string;
-    markedAsToBeConverted?: boolean;
-    convertionString?: string;
+    directiveAutolink?: "bracket" | "parenthesis";
+    directiveFigure?: boolean;
+    directiveCaption?: string;
+    directiveConversion?: string;
+    directiveTitle?: string;
   }
 }
 
 declare module "mdast-util-mdx-jsx" {
   interface MdxJsxFlowElementHastData {
-    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
-    markedAsToBeInFigure?: boolean;
-    captionInFigure?: string;
-    markedAsToBeConverted?: boolean;
-    convertionString?: string;
+    directiveAutolink?: "bracket" | "parenthesis";
+    directiveFigure?: boolean;
+    directiveCaption?: string;
+    directiveConversion?: string;
+    directiveTitle?: string;
   }
   interface MdxJsxTextElementHastData {
-    markedAsToBeAutoLinked?: "bracket" | "parenthesis";
-    markedAsToBeInFigure?: boolean;
-    captionInFigure?: string;
-    markedAsToBeConverted?: boolean;
-    convertionString?: string;
+    directiveAutolink?: "bracket" | "parenthesis";
+    directiveFigure?: boolean;
+    directiveCaption?: string;
+    directiveConversion?: string;
+    directiveTitle?: string;
   }
 }
 
@@ -222,9 +222,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // Preparation part for adding figure and caption *****************************
 
-      const alt = node.properties.alt;
+      if (node.properties.alt) {
+        const alt = node.properties.alt;
 
-      if (alt) {
         const startsWith = {
           plus: alt.startsWith("+"),
           star: alt.startsWith("*"),
@@ -233,23 +233,21 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (startsWith.plus || startsWith.star || startsWith.caption) {
           const isFigureParent = isFigureElement(parent);
-          if (!isFigureParent) node.properties.markedAsToBeInFigure = true;
+          if (!isFigureParent) node.properties.directiveFigure = true;
 
           const figcaptionText =
             startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
-          node.properties.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+          node.properties.directiveCaption = !startsWith.plus ? figcaptionText : undefined;
           node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
         }
       }
 
       // Preparation part for adding autolink ***************************************
 
-      const src_ = node.properties.src;
-      /* v8 ignore next */
-      let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
+      if (node.properties.src) {
+        let src = decodeURI(node.properties.src);
 
-      if (src) {
         for (const { wrapper, regex } of SRC_WRAPPERS) {
           if (regex.test(src)) {
             src = src.slice(1, -1);
@@ -263,10 +261,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
             if (node.tagName === "img" && isValidAutolink) {
               const isAnchorParent = isAnchorElement(parent);
-              const isFigurable = node.properties.markedAsToBeInFigure;
+              const isFigurable = node.properties.directiveFigure;
 
               if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                node.properties.markedAsToBeAutoLinked = wrapper;
+                node.properties.directiveAutolink = wrapper;
               }
 
               break; // stop after the first match
@@ -275,14 +273,23 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      // Preparation part for convertion to video/audio ****************************
+      // Preparation part for conversion to video/audio ****************************
 
-      const extension = getExtension(node.properties.src);
-      const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
+      if (node.tagName === "img") {
+        const extension = getExtension(node.properties.src);
+        const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
-      if (needsConversion && node.tagName === "img") {
-        node.properties.markedAsToBeConverted = true;
-        node.properties.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+        if (needsConversion) {
+          node.properties.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+        }
+      }
+
+      // Preparation part for adding attributes utilizing title ************************
+
+      if (node.properties.title && node.properties.title.includes(">")) {
+        const [title, directive] = node.properties.title.split(">");
+        node.properties.title = title.trim() || undefined;
+        if (directive) node.properties.directiveTitle = directive.trim() || undefined;
       }
     });
 
@@ -330,12 +337,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
             if (startsWith.plus || startsWith.star || startsWith.caption) {
               const isFigureParent = isFigureMdxJsxElement(parent);
-              if (!isFigureParent) node.data.markedAsToBeInFigure = true;
+              if (!isFigureParent) node.data.directiveFigure = true;
 
               const figcaptionText =
                 startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
-              node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+              node.data.directiveCaption = !startsWith.plus ? figcaptionText : undefined;
 
               if (node.name === "img") {
                 if (type === "string") {
@@ -386,10 +393,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
                 if (node.name === "img" && isValidAutolink) {
                   const isAnchorParent = isAnchorMdxJsxElement(parent);
-                  const isFigurable = node.data?.markedAsToBeInFigure;
+                  const isFigurable = node.data?.directiveFigure;
 
                   if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                    node.data.markedAsToBeAutoLinked = wrapper;
+                    node.data.directiveAutolink = wrapper;
                   }
                   break; // stop after the first match
                 }
@@ -398,7 +405,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           }
         }
 
-        // Preparation part for convertion to video/audio ****************************
+        // Preparation part for conversion to video/audio ****************************
 
         if (srcAttribute) {
           const src = getAttributeValue(srcAttribute)[1];
@@ -407,8 +414,38 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
           if (needsConversion && node.name === "img") {
-            node.data.markedAsToBeConverted = true;
-            node.data.convertionString = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+            node.data.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+          }
+        }
+
+        // Preparation part for adding attributes utilizing title ************************
+
+        const titleAttribute = node.attributes.find(
+          (attr): attr is MdxJsxAttribute =>
+            attr.type === "mdxJsxAttribute" && attr.name === "title",
+        );
+
+        if (titleAttribute) {
+          const [type, title] = getAttributeValue(titleAttribute);
+
+          if (typeof title === "string" && title.includes(">")) {
+            const [mainTitle, directive] = title.split(">");
+            const newTitle = mainTitle.trim() || undefined;
+
+            if (newTitle) {
+              if (type === "string") {
+                titleAttribute.value = mainTitle.trim();
+              } else {
+                titleAttribute.value = composeAttributeValueExpressionLiteral(mainTitle.trim());
+              }
+            } else {
+              // remove title attribute if it is empty string
+              node.attributes = node.attributes.filter(
+                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
+              );
+            }
+
+            node.data.directiveTitle = directive.trim() || undefined;
           }
         }
       },
@@ -514,7 +551,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       function isMarkedElement(el: ElementContent | undefined | null) {
         /* v8 ignore next */
         if (!el || !("properties" in el)) return false;
-        return el.properties.markedAsToBeInFigure || el.properties.markedAsToBeConverted;
+        return el.properties.directiveFigure || el.properties.directiveConversion;
       }
 
       function isRelevantMdxJsxElement(element: ElementContent) {
@@ -544,7 +581,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       function isMarkedMdxJsxElement(el: ElementContent | undefined | null) {
         /* v8 ignore next */
         if (!el || !("attributes" in el)) return false;
-        return el.data?.markedAsToBeInFigure || el.data?.markedAsToBeConverted;
+        return el.data?.directiveFigure || el.data?.directiveConversion;
       }
     });
 
@@ -568,8 +605,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // The application part for adding figure and caption ****************************
 
-      if (node.properties.markedAsToBeInFigure) {
-        const caption = node.properties.captionInFigure;
+      if (node.properties.directiveFigure) {
+        const caption = node.properties.directiveCaption;
+        node.properties.directiveFigure = undefined;
+        node.properties.directiveCaption = undefined;
 
         const figcaptionElement: Element = {
           type: "element",
@@ -589,13 +628,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               : [node, figcaptionElement],
         };
 
-        node.properties.markedAsToBeInFigure = undefined;
-        node.properties.captionInFigure = undefined;
-
         parent.children.splice(index, 1, figureElement);
+
         return index;
-      } else if (node.properties.captionInFigure) {
-        const caption = node.properties.captionInFigure;
+      } else if (node.properties.directiveCaption) {
+        const caption = node.properties.directiveCaption;
+        node.properties.directiveCaption = undefined;
 
         const figcaptionElement: Element = {
           type: "element",
@@ -610,16 +648,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           parent.children.push(figcaptionElement);
         }
 
-        node.properties.captionInFigure = undefined;
         return index;
       }
 
-      // The application part for convertion to video/audio ****************************
+      // The application part for conversion to video/audio ****************************
 
-      if (node.properties.markedAsToBeConverted) {
-        const [newTagName, extension] = node.properties.convertionString!.split("/");
-        node.properties.markedAsToBeConverted = undefined;
-        node.properties.convertionString = undefined;
+      if (node.properties.directiveConversion) {
+        const [newTagName, extension] = node.properties.directiveConversion.split("/");
+        node.properties.directiveConversion = undefined;
 
         const src = node.properties.src;
         node.properties.src = undefined;
@@ -650,19 +686,20 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               children: [],
             },
           ],
+          data: node.data,
         };
 
         parent.children.splice(index, 1, newNode);
+
         return index;
       }
 
       // The application part for adding attributes utilizing title ************************
 
-      if (node.properties.title?.includes(">")) {
-        const [mainTitle, directives] = node.properties.title.split(">");
-        node.properties.title = mainTitle.trim() || undefined;
+      if (node.properties.directiveTitle) {
+        const attrs = split(node.properties.directiveTitle);
+        node.properties.directiveTitle = undefined;
 
-        const attrs = split(directives);
         attrs.forEach((attr) => {
           if (attr.startsWith("#")) {
             node.properties.id = attr.slice(1);
@@ -711,10 +748,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // The application part for adding autolink ***********************************
 
-      if (node.properties.markedAsToBeAutoLinked) {
+      if (node.properties.directiveAutolink) {
         const src = node.properties.src;
-        const marker = node.properties.markedAsToBeAutoLinked;
-        node.properties.markedAsToBeAutoLinked = undefined;
+        const marker = node.properties.directiveAutolink;
+        node.properties.directiveAutolink = undefined;
 
         const isFigureParent = isFigureElement(parent);
         if (isFigureParent && marker === "bracket") {
@@ -781,8 +818,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // The application part for adding figure and caption ****************************
 
-        if (node.data?.markedAsToBeInFigure) {
-          const caption = node.data.captionInFigure;
+        if (node.data?.directiveFigure) {
+          const caption = node.data.directiveCaption;
+          node.data.directiveFigure = undefined;
+          node.data.directiveCaption = undefined;
 
           const figcaptionElement: MdxJsxFlowElementHast = {
             type: "mdxJsxFlowElement",
@@ -802,13 +841,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 : [node, figcaptionElement],
           };
 
-          node.data.markedAsToBeInFigure = undefined;
-          node.data.captionInFigure = undefined;
-
           parent.children.splice(index, 1, figureElement);
+
           return index;
-        } else if (node.data?.captionInFigure) {
-          const caption = node.data.captionInFigure;
+        } else if (node.data?.directiveCaption) {
+          const caption = node.data.directiveCaption;
+          node.data.directiveCaption = undefined;
 
           const figcaptionElement: MdxJsxFlowElementHast = {
             type: "mdxJsxFlowElement",
@@ -823,21 +861,22 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             parent.children.push(figcaptionElement);
           }
 
-          node.data.captionInFigure = undefined;
           return index;
         }
 
-        // The application part for convertion to video/audio ****************************
+        // The application part for conversion to video/audio ****************************
 
-        if (node.data?.markedAsToBeConverted) {
-          const [newTagName, extension] = node.data.convertionString!.split("/");
-          node.data.markedAsToBeConverted = undefined;
-          node.data.convertionString = undefined;
+        if (node.data?.directiveConversion) {
+          const [newTagName, extension] = node.data.directiveConversion.split("/");
+          node.data.directiveConversion = undefined;
 
+          // TODO look at the src attribute since conversion image to video may blabla...
+          // also autolink uses it
           const srcAttribute = node.attributes.find(
             (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
           );
 
+          // TODO
           const src = srcAttribute?.value;
 
           node.attributes = node.attributes.filter(
@@ -886,139 +925,112 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 children: [],
               },
             ],
+            data: node.data,
           };
 
           parent.children.splice(index, 1, newNode);
+
           return index;
         }
 
         // The application part for adding attributes utilizing title ************************
+        if (node.data?.directiveTitle) {
+          const attrs = split(node.data.directiveTitle);
+          node.data.directiveTitle = undefined;
 
-        const titleAttribute = node.attributes.find(
-          (attr): attr is MdxJsxAttribute =>
-            attr.type === "mdxJsxAttribute" && attr.name === "title",
-        );
+          if (attrs.length) {
+            const attributes = structuredClone(node.attributes);
 
-        if (titleAttribute) {
-          const [type, title] = getAttributeValue(titleAttribute);
-
-          if (typeof title === "string") {
-            if (title.includes(">")) {
-              const [mainTitle, directives] = title.split(">");
-              const newTitle = mainTitle.trim();
-
-              if (newTitle) {
-                if (type === "string") {
-                  titleAttribute.value = newTitle;
+            attrs.forEach((attr) => {
+              if (attr.startsWith("#")) {
+                updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
+              } else if (attr.startsWith(".")) {
+                updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
+              } else if (attr.includes("=")) {
+                const [key, value] = attr.split("=");
+                if (key === "width" || key === "height") {
+                  const match = value.match(/^(\d+)(?:px)?$/);
+                  if (match) {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      key,
+                      composeAttributeValueExpressionLiteral(Number(match[1])),
+                    );
+                  } else {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      "style",
+                      composeAttributeValueExpressionStyle(`${key}:${value}`),
+                    );
+                  }
+                } else if (key === "style") {
+                  updateOrAddMdxAttribute(
+                    attributes,
+                    key,
+                    composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
+                  );
+                } else if (value === "undefined") {
+                  updateOrAddMdxAttribute(attributes, key, undefined);
+                } else if (value === "null") {
+                  updateOrAddMdxAttribute(attributes, key, null);
                 } else {
-                  titleAttribute.value = composeAttributeValueExpressionLiteral(newTitle);
+                  updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
+                }
+              } else if (attr.includes("x")) {
+                const [width, height] = attr.split("x");
+
+                if (width) {
+                  const matchWidth = width.match(/^(\d+)(?:px)?$/);
+                  if (matchWidth) {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      "width",
+                      composeAttributeValueExpressionLiteral(Number(matchWidth[1])),
+                    );
+                  } else {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      "style",
+                      composeAttributeValueExpressionStyle(`width:${width}`),
+                    );
+                  }
+                }
+
+                if (height) {
+                  const matchHeight = height.match(/^(\d+)(?:px)?$/);
+                  if (matchHeight) {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      "height",
+                      composeAttributeValueExpressionLiteral(Number(matchHeight[1])),
+                    );
+                  } else {
+                    updateOrAddMdxAttribute(
+                      attributes,
+                      "style",
+                      composeAttributeValueExpressionStyle(`height:${height}`),
+                    );
+                  }
                 }
               } else {
-                // remove title attribute if it is empty string
-                node.attributes = node.attributes.filter(
-                  (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
-                );
+                updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[attr] || attr, null);
               }
+            });
 
-              const attrs = split(directives);
-              if (attrs.length) {
-                const attributes = structuredClone(node.attributes);
-
-                attrs.forEach((attr) => {
-                  if (attr.startsWith("#")) {
-                    updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
-                  } else if (attr.startsWith(".")) {
-                    updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
-                  } else if (attr.includes("=")) {
-                    const [key, value] = attr.split("=");
-                    if (key === "width" || key === "height") {
-                      const match = value.match(/^(\d+)(?:px)?$/);
-                      if (match) {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          key,
-                          composeAttributeValueExpressionLiteral(Number(match[1])),
-                        );
-                      } else {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          "style",
-                          composeAttributeValueExpressionStyle(`${key}:${value}`),
-                        );
-                      }
-                    } else if (key === "style") {
-                      updateOrAddMdxAttribute(
-                        attributes,
-                        key,
-                        composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
-                      );
-                    } else if (value === "undefined") {
-                      updateOrAddMdxAttribute(attributes, key, undefined);
-                    } else if (value === "null") {
-                      updateOrAddMdxAttribute(attributes, key, null);
-                    } else {
-                      updateOrAddMdxAttribute(
-                        attributes,
-                        htmlToReactAttrMap[key] || key,
-                        value,
-                      );
-                    }
-                  } else if (attr.includes("x")) {
-                    const [width, height] = attr.split("x");
-
-                    if (width) {
-                      const matchWidth = width.match(/^(\d+)(?:px)?$/);
-                      if (matchWidth) {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          "width",
-                          composeAttributeValueExpressionLiteral(Number(matchWidth[1])),
-                        );
-                      } else {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          "style",
-                          composeAttributeValueExpressionStyle(`width:${width}`),
-                        );
-                      }
-                    }
-
-                    if (height) {
-                      const matchHeight = height.match(/^(\d+)(?:px)?$/);
-                      if (matchHeight) {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          "height",
-                          composeAttributeValueExpressionLiteral(Number(matchHeight[1])),
-                        );
-                      } else {
-                        updateOrAddMdxAttribute(
-                          attributes,
-                          "style",
-                          composeAttributeValueExpressionStyle(`height:${height}`),
-                        );
-                      }
-                    }
-                  } else {
-                    updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[attr] || attr, null);
-                  }
-                });
-
-                node.attributes = structuredClone(attributes);
-              }
-            }
+            node.attributes = structuredClone(attributes);
           }
         }
 
         // The application part for adding autolink ***********************************
 
-        if (node.data?.markedAsToBeAutoLinked) {
+        if (node.data?.directiveAutolink) {
           const srcAttribute = node.attributes.find(
             (a) => a.type === "mdxJsxAttribute" && a.name === "src",
           );
+
           const src = srcAttribute?.value;
-          const marker = node.data.markedAsToBeAutoLinked;
-          node.data.markedAsToBeAutoLinked = undefined;
+          const marker = node.data.directiveAutolink;
+          node.data.directiveAutolink = undefined;
 
           const isFigureParent = isFigureMdxJsxElement(parent);
 
