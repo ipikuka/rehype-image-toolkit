@@ -5,13 +5,18 @@ import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
-import type { MdxJsxFlowElementHast, MdxJsxTextElementHast } from "mdast-util-mdx-jsx";
+import type {
+  MdxJsxAttribute,
+  MdxJsxFlowElementHast,
+  MdxJsxTextElementHast,
+} from "mdast-util-mdx-jsx";
 
 import { appendStyle, getExtension } from "./utils/index.js";
 import {
+  getAttributeValue,
+  updateOrAddMdxAttribute,
   composeAttributeValueExpressionLiteral,
   composeAttributeValueExpressionStyle,
-  updateOrAddMdxAttribute,
 } from "./utils/util.mdxjsx.js";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
@@ -309,34 +314,41 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // Preparation part for adding figure and caption *****************************
 
         const altAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "alt",
+          (attr): attr is MdxJsxAttribute =>
+            attr.type === "mdxJsxAttribute" && attr.name === "alt",
         );
 
-        const alt = typeof altAttribute?.value === "string" ? altAttribute.value : undefined;
+        if (altAttribute) {
+          const [type, alt] = getAttributeValue(altAttribute);
 
-        if (altAttribute && alt) {
-          const startsWith = {
-            plus: alt.startsWith("+"),
-            star: alt.startsWith("*"),
-            caption: alt.startsWith("caption:"),
-          };
+          if (typeof alt === "string") {
+            const startsWith = {
+              plus: alt.startsWith("+"),
+              star: alt.startsWith("*"),
+              caption: alt.startsWith("caption:"),
+            };
 
-          if (startsWith.plus || startsWith.star || startsWith.caption) {
-            const isFigureParent = isFigureMdxJsxElement(parent);
-            if (!isFigureParent) node.data.markedAsToBeInFigure = true;
+            if (startsWith.plus || startsWith.star || startsWith.caption) {
+              const isFigureParent = isFigureMdxJsxElement(parent);
+              if (!isFigureParent) node.data.markedAsToBeInFigure = true;
 
-            const figcaptionText =
-              startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+              const figcaptionText =
+                startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
-            node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
+              node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
 
-            if (node.name === "img") {
-              altAttribute.value = figcaptionText;
-            } else {
-              // remove alt attribute if the node is video/audio
-              node.attributes = node.attributes.filter(
-                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "alt",
-              );
+              if (node.name === "img") {
+                if (type === "string") {
+                  altAttribute.value = figcaptionText;
+                } else {
+                  altAttribute.value = composeAttributeValueExpressionLiteral(figcaptionText);
+                }
+              } else {
+                // remove alt attribute if the node is video/audio
+                node.attributes = node.attributes.filter(
+                  (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "alt",
+                );
+              }
             }
           }
         }
@@ -344,33 +356,43 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // Preparation part for adding autolink ***************************************
 
         const srcAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
+          (attr): attr is MdxJsxAttribute =>
+            attr.type === "mdxJsxAttribute" && attr.name === "src",
         );
 
-        /* v8 ignore next 2*/
-        const src_ = typeof srcAttribute?.value === "string" ? srcAttribute.value : undefined;
-        let src = typeof src_ === "string" ? decodeURI(src_) : undefined;
+        if (srcAttribute) {
+          const [type, src_] = getAttributeValue(srcAttribute);
 
-        if (srcAttribute && src) {
-          for (const { wrapper, regex } of SRC_WRAPPERS) {
-            if (regex.test(src)) {
-              src = src.slice(1, -1);
-              srcAttribute.value = src;
+          /* v8 ignore next 2*/
 
-              const isValidAutolink =
-                (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
-                rootRelativeRegex.test(src) ||
-                wwwRegex.test(src) ||
-                fileLinkRegex.test(src);
+          if (typeof src_ === "string") {
+            let src = decodeURI(src_);
 
-              if (node.name === "img" && isValidAutolink) {
-                const isAnchorParent = isAnchorMdxJsxElement(parent);
-                const isFigurable = node.data?.markedAsToBeInFigure;
+            for (const { wrapper, regex } of SRC_WRAPPERS) {
+              if (regex.test(src)) {
+                src = src.slice(1, -1);
 
-                if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                  node.data.markedAsToBeAutoLinked = wrapper;
+                if (type === "string") {
+                  srcAttribute.value = src;
+                } else {
+                  srcAttribute.value = composeAttributeValueExpressionLiteral(src);
                 }
-                break; // stop after the first match
+
+                const isValidAutolink =
+                  (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+                  rootRelativeRegex.test(src) ||
+                  wwwRegex.test(src) ||
+                  fileLinkRegex.test(src);
+
+                if (node.name === "img" && isValidAutolink) {
+                  const isAnchorParent = isAnchorMdxJsxElement(parent);
+                  const isFigurable = node.data?.markedAsToBeInFigure;
+
+                  if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+                    node.data.markedAsToBeAutoLinked = wrapper;
+                  }
+                  break; // stop after the first match
+                }
               }
             }
           }
@@ -378,8 +400,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for convertion to video/audio ****************************
 
-        if (srcAttribute && typeof srcAttribute.value === "string") {
-          const extension = getExtension(srcAttribute.value);
+        if (srcAttribute) {
+          const [_, src] = getAttributeValue(srcAttribute);
+
+          const extension = typeof src === "string" ? getExtension(src) : undefined;
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
           if (needsConversion && node.name === "img") {
@@ -871,97 +895,117 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // The application part for adding attributes utilizing title ************************
 
         const titleAttribute = node.attributes.find(
-          (attr) => attr.type === "mdxJsxAttribute" && attr.name === "title",
+          (attr): attr is MdxJsxAttribute =>
+            attr.type === "mdxJsxAttribute" && attr.name === "title",
         );
 
-        if (
-          titleAttribute?.type === "mdxJsxAttribute" &&
-          typeof titleAttribute.value === "string"
-        ) {
-          const title = titleAttribute.value;
-          if (title.includes(">")) {
-            const [mainTitle, directives] = title.split(">");
-            const newTitle = mainTitle.trim();
+        if (titleAttribute) {
+          const [type, title] = getAttributeValue(titleAttribute);
 
-            if (newTitle) {
-              titleAttribute.value = newTitle;
-            } else {
-              // remove title attribute if it is empty string
-              node.attributes = node.attributes.filter(
-                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
-              );
-            }
+          if (typeof title === "string") {
+            if (title.includes(">")) {
+              const [mainTitle, directives] = title.split(">");
+              const newTitle = mainTitle.trim();
 
-            const attrs = split(directives);
-            if (attrs.length) {
-              const attributes = structuredClone(node.attributes);
-
-              attrs.forEach((attr) => {
-                if (attr.startsWith("#")) {
-                  updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
-                } else if (attr.startsWith(".")) {
-                  updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
-                } else if (attr.includes("=")) {
-                  const [key, value] = attr.split("=");
-                  if (key === "width" || key === "height") {
-                    const match = value.match(/^(\d+)(?:px)?$/);
-                    if (match) {
-                      updateOrAddMdxAttribute(attributes, key, Number(match[1]));
-                    } else {
-                      updateOrAddMdxAttribute(
-                        attributes,
-                        "style",
-                        composeAttributeValueExpressionStyle(`${key}:${value}`),
-                      );
-                    }
-                  } else if (key === "style") {
-                    updateOrAddMdxAttribute(
-                      attributes,
-                      key,
-                      composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
-                    );
-                  } else {
-                    updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
-                  }
-                } else if (attr.includes("x")) {
-                  const [width, height] = attr.split("x");
-
-                  if (width) {
-                    const matchWidth = width.match(/^(\d+)(?:px)?$/);
-                    if (matchWidth) {
-                      updateOrAddMdxAttribute(attributes, "width", Number(matchWidth[1]));
-                    } else {
-                      updateOrAddMdxAttribute(
-                        attributes,
-                        "style",
-                        composeAttributeValueExpressionStyle(`width:${width}`),
-                      );
-                    }
-                  }
-
-                  if (height) {
-                    const matchHeight = height.match(/^(\d+)(?:px)?$/);
-                    if (matchHeight) {
-                      updateOrAddMdxAttribute(attributes, "height", Number(matchHeight[1]));
-                    } else {
-                      updateOrAddMdxAttribute(
-                        attributes,
-                        "style",
-                        composeAttributeValueExpressionStyle(`height:${height}`),
-                      );
-                    }
-                  }
+              if (newTitle) {
+                if (type === "string") {
+                  titleAttribute.value = newTitle;
                 } else {
-                  // updateOrAddMdxAttribute(attributes, attr, null);
-                  updateOrAddMdxAttribute(
-                    attributes,
-                    htmlToReactAttrMap[attr] || attr,
-                    composeAttributeValueExpressionLiteral(true),
-                  );
+                  titleAttribute.value = composeAttributeValueExpressionLiteral(newTitle);
                 }
-              });
+              } else {
+                // remove title attribute if it is empty string
+                node.attributes = node.attributes.filter(
+                  (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
+                );
+              }
 
-              node.attributes = structuredClone(attributes);
+              const attrs = split(directives);
+              if (attrs.length) {
+                const attributes = structuredClone(node.attributes);
+
+                attrs.forEach((attr) => {
+                  if (attr.startsWith("#")) {
+                    updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
+                  } else if (attr.startsWith(".")) {
+                    updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
+                  } else if (attr.includes("=")) {
+                    const [key, value] = attr.split("=");
+                    if (key === "width" || key === "height") {
+                      const match = value.match(/^(\d+)(?:px)?$/);
+                      if (match) {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          key,
+                          composeAttributeValueExpressionLiteral(Number(match[1])),
+                        );
+                      } else {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          "style",
+                          composeAttributeValueExpressionStyle(`${key}:${value}`),
+                        );
+                      }
+                    } else if (key === "style") {
+                      updateOrAddMdxAttribute(
+                        attributes,
+                        key,
+                        composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
+                      );
+                    } else if (value === "undefined") {
+                      updateOrAddMdxAttribute(attributes, key, undefined);
+                    } else if (value === "null") {
+                      updateOrAddMdxAttribute(attributes, key, null);
+                    } else {
+                      updateOrAddMdxAttribute(
+                        attributes,
+                        htmlToReactAttrMap[key] || key,
+                        value,
+                      );
+                    }
+                  } else if (attr.includes("x")) {
+                    const [width, height] = attr.split("x");
+
+                    if (width) {
+                      const matchWidth = width.match(/^(\d+)(?:px)?$/);
+                      if (matchWidth) {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          "width",
+                          composeAttributeValueExpressionLiteral(Number(matchWidth[1])),
+                        );
+                      } else {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          "style",
+                          composeAttributeValueExpressionStyle(`width:${width}`),
+                        );
+                      }
+                    }
+
+                    if (height) {
+                      const matchHeight = height.match(/^(\d+)(?:px)?$/);
+                      if (matchHeight) {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          "height",
+                          composeAttributeValueExpressionLiteral(Number(matchHeight[1])),
+                        );
+                      } else {
+                        updateOrAddMdxAttribute(
+                          attributes,
+                          "style",
+                          composeAttributeValueExpressionStyle(`height:${height}`),
+                        );
+                      }
+                    }
+                  } else {
+                    updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[attr] || attr, null);
+                  }
+                });
+
+                node.attributes = structuredClone(attributes);
+              }
             }
           }
         }
