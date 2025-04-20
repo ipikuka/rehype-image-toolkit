@@ -299,7 +299,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
 
-        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
+        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
           return;
         }
 
@@ -329,7 +329,15 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
 
             node.data.captionInFigure = !startsWith.plus ? figcaptionText : undefined;
-            altAttribute.value = node.name === "img" ? figcaptionText : undefined;
+
+            if (node.name === "img") {
+              altAttribute.value = figcaptionText;
+            } else {
+              // remove alt attribute if the node is video/audio
+              node.attributes = node.attributes.filter(
+                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "alt",
+              );
+            }
           }
         }
 
@@ -743,7 +751,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement") return;
 
-        if (!node.name || !["img", "video", "Video", "audio"].includes(node.name)) {
+        if (!node.name || !["img", "video", "audio"].includes(node.name)) {
           return;
         }
 
@@ -819,7 +827,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
-              value: "true",
+              value: composeAttributeValueExpressionLiteral(true),
             });
           }
 
@@ -827,7 +835,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
-              value: "true",
+              value: composeAttributeValueExpressionLiteral(true),
             });
           }
 
@@ -873,7 +881,16 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const title = titleAttribute.value;
           if (title.includes(">")) {
             const [mainTitle, directives] = title.split(">");
-            titleAttribute.value = mainTitle.trim() || undefined;
+            const newTitle = mainTitle.trim();
+
+            if (newTitle) {
+              titleAttribute.value = newTitle;
+            } else {
+              // remove title attribute if it is empty string
+              node.attributes = node.attributes.filter(
+                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
+              );
+            }
 
             const attrs = split(directives);
             if (attrs.length) {

@@ -24,6 +24,7 @@ export const processMdx = async (
     components: {
       Image: (props) => <img {...props} />,
       Video: (props) => <video {...props} />,
+      Audio: (props) => <audio {...props} />,
     },
   });
 
