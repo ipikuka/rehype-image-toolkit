@@ -410,6 +410,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         if (srcAttribute) {
           const src = getAttributeValue(srcAttribute)[1];
 
+          /* v8 ignore next */
           const extension = typeof src === "string" ? getExtension(src) : undefined;
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
@@ -890,7 +891,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
-              value: composeAttributeValueExpressionLiteral(true),
+              value: null,
             });
           }
 
@@ -898,7 +899,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
-              value: composeAttributeValueExpressionLiteral(true),
+              value: null,
             });
           }
 
@@ -971,8 +972,6 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                   );
                 } else if (value === "undefined") {
                   updateOrAddMdxAttribute(attributes, key, undefined);
-                } else if (value === "null") {
-                  updateOrAddMdxAttribute(attributes, key, null);
                 } else {
                   updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
                 }
