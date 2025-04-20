@@ -61,7 +61,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   });
 
   // ******************************************
-  it("MDX source, autolinks && caption already in a link and/or a figure - 1", async () => {
+  it("MDX source, autolinks && caption already in a link - 1", async () => {
     const input = dedent`
       [![]([image.png])](https://example.com)
       [![]((image.png))](https://example.com)
@@ -106,9 +106,8 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
-  // TODO handle if the grandparent is already a figure element, the last couple
   // ******************************************
-  it("MDX source, autolinks && caption already in a link and/or a figure - 2", async () => {
+  it("MDX source, autolinks already in a link and/or a figure - 2", async () => {
     const input = dedent`
       <a href="https://example.com">
         <figure><img src="[image.png]" alt=""/></figure>
@@ -119,7 +118,31 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       
       <figure><a href="https://example.com"><img src="[image.png]" alt=""/></a></figure>
       <figure><a href="https://example.com"><img src="(image.png)" alt=""/></a></figure>
+    `;
 
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<a href="https://example.com">
+        <figure><img src="image.png" alt=""/></figure>
+      </a>
+      <a href="https://example.com">
+        <figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure>
+      </a>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>"
+    `);
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>
+      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure></a>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
+      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>"
+    `);
+  });
+
+  // TODO handle if the grandparent is already a figure element, the last couple
+  // ******************************************
+  it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
+    const input = dedent`
       <a href="https://example.com">
         <figure><img src="[image.png]" alt="*Caption"/></figure>
       </a>
@@ -133,14 +156,6 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
       "<a href="https://example.com">
-        <figure><img src="image.png" alt=""/></figure>
-      </a>
-      <a href="https://example.com">
-        <figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure>
-      </a>
-      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
-      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
-      <a href="https://example.com">
         <figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure>
       </a>
       <a href="https://example.com">
@@ -151,11 +166,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
 
     expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
-      "<a href="https://example.com"><figure><img src="image.png" alt=""/></figure></a>
-      <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt=""/></a></figure></a>
-      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
-      <figure><a href="https://example.com"><img src="image.png" alt=""/></a></figure>
-      <a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
+      "<a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>
       <a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a>
       <figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
       <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
@@ -163,7 +174,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   });
 
   // ******************************************
-  it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
+  it("MDX source, autolinks && does NOT add figure due to be in a figure already", async () => {
     const input = dedent`
       <figure><img src="image.png" alt="+Caption"/></figure>
       <figure><img src="image.png" alt="*Caption"/></figure>
@@ -189,7 +200,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   });
 
   // ******************************************
-  it("MDX source, autolinks && caption already in a link and/or a figure - 3, figcaption is above", async () => {
+  it("MDX source, autolinks && does NOT add figure due to be in a figure already, figcaption is above", async () => {
     const input = dedent`
       <figure><img src="image.png" alt="+Caption"/></figure>
       <figure><img src="image.png" alt="*Caption"/></figure>
