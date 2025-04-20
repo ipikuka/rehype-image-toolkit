@@ -8,10 +8,32 @@ import type {
   MdxJsxExpressionAttribute,
 } from "mdast-util-mdx-jsx";
 
+export type AttributeValueResult =
+  | ["string", string]
+  | ["expression", string | number | bigint | boolean | RegExp | null | undefined]
+  | ["unknown", undefined];
+
+export function getAttributeValue(attr: MdxJsxAttribute): AttributeValueResult {
+  if (attr.value && typeof attr.value !== "string") {
+    const expression = attr.value.data?.estree?.body?.[0];
+
+    if (
+      expression?.type === "ExpressionStatement" &&
+      expression.expression.type === "Literal"
+    ) {
+      return ["expression", expression.expression.value];
+    }
+  } else if (typeof attr.value === "string") {
+    return ["string", attr.value];
+  }
+
+  return ["unknown", undefined];
+}
+
 export function updateOrAddMdxAttribute(
   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
   name: string,
-  value: MdxJsxAttributeValueExpression | string | number | boolean | null | undefined,
+  value: MdxJsxAttribute["value"],
 ): void {
   const existingAttribute = attributes.find(
     (attr): attr is MdxJsxAttribute => attr.type === "mdxJsxAttribute" && attr.name === name,
@@ -24,46 +46,49 @@ export function updateOrAddMdxAttribute(
     return;
   }
 
-  /* v8 ignore next 9 */
-  if (value === null) {
-    if (existingAttribute) {
-      existingAttribute.value = null;
-    } else {
-      attributes.push({ type: "mdxJsxAttribute", name, value: null });
-    }
+  if (!existingAttribute) {
+    attributes.push({ type: "mdxJsxAttribute", name, value: value });
 
     return;
   }
 
-  const isExpression = typeof value === "object";
-  const newValue = isExpression ? value : String(value);
+  /* v8 ignore next 9 */
+  if (value === null) {
+    if (existingAttribute) existingAttribute.value = null;
 
-  if (existingAttribute) {
-    if (name === "className" && typeof existingAttribute.value === "string") {
-      const currentClasses = new Set(existingAttribute.value.split(/\s+/).filter(Boolean));
-      if (typeof value === "string") currentClasses.add(value);
-      existingAttribute.value = join(Array.from(currentClasses));
-    } else if (name === "style") {
-      if (typeof existingAttribute.value === "object" && typeof value === "object") {
-        const expressionStatementExistingAttribute =
-          existingAttribute.value?.data?.estree?.body[0];
-        const expressionStatementPatch = value.data?.estree?.body[0];
-        if (
-          expressionStatementExistingAttribute?.type === "ExpressionStatement" &&
-          expressionStatementPatch?.type === "ExpressionStatement" &&
-          expressionStatementExistingAttribute.expression.type === "ObjectExpression" &&
-          expressionStatementPatch.expression.type === "ObjectExpression"
-        ) {
-          expressionStatementExistingAttribute.expression.properties.push(
-            ...expressionStatementPatch.expression.properties,
-          );
-        }
-      }
+    return;
+  }
+
+  const [existingType, existingValue] = getAttributeValue(existingAttribute);
+
+  if (name === "className" && typeof existingValue === "string") {
+    const currentClasses = new Set(existingValue.split(/\s+/).filter(Boolean));
+    if (typeof value === "string") currentClasses.add(value);
+    const newClassname = join(Array.from(currentClasses));
+
+    if (existingType === "string") {
+      existingAttribute.value = newClassname;
     } else {
-      existingAttribute.value = newValue;
+      existingAttribute.value = composeAttributeValueExpressionLiteral(newClassname);
+    }
+  } else if (name === "style") {
+    if (typeof existingAttribute.value === "object" && typeof value === "object") {
+      const expressionStatementExistingAttribute =
+        existingAttribute.value?.data?.estree?.body[0];
+      const expressionStatementPatch = value.data?.estree?.body[0];
+      if (
+        expressionStatementExistingAttribute?.type === "ExpressionStatement" &&
+        expressionStatementPatch?.type === "ExpressionStatement" &&
+        expressionStatementExistingAttribute.expression.type === "ObjectExpression" &&
+        expressionStatementPatch.expression.type === "ObjectExpression"
+      ) {
+        expressionStatementExistingAttribute.expression.properties.push(
+          ...expressionStatementPatch.expression.properties,
+        );
+      }
     }
   } else {
-    attributes.push({ type: "mdxJsxAttribute", name, value: newValue });
+    existingAttribute.value = value;
   }
 }
 
