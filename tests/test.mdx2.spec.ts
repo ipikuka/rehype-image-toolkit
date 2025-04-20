@@ -26,6 +26,23 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   });
 
   // ******************************************
+  it("Basic MDX source, eleminates empty titles", async () => {
+    const input = dedent`
+      ![](image.png " > ")
+
+      <img src="image.png" alt="" title=" > "/>
+    `;
+
+    const output = `
+      "<p><img src="image.png" alt=""/></p>
+      <img src="image.png" alt=""/>"
+    `;
+
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(output);
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(output);
+  });
+
+  // ******************************************
   it("MDX source, handle autolinks", async () => {
     const input = dedent`
       ![]([image.png])
