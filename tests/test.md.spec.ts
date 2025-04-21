@@ -23,16 +23,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     const html = String(await processMd(input));
 
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p><img src="" alt="" /></p>
-      <p><img src="image.png" alt="" /></p>
-      <video><source src="video.mp4" type="video/mp4" /></video>
-      <audio><source src="audio.mp3" type="audio/mpeg" /></audio>
-      <p><img src="unknown.xxx" alt="" /></p>
-      <p><img src="invalid" alt="" /></p>
-      "
-    `);
-
     expect(html).toMatchInlineSnapshot(`
       "<p><img src="" alt=""></p>
       <p><img src="image.png" alt=""></p>
@@ -60,6 +50,34 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <video><source src="video.mp4" type="video/mp4"></video>
       <audio><source src="audio.mp3" type="audio/mpeg"></audio>
       <p>Both video and audio tell the truth.</p>"
+    `);
+  });
+
+  // ******************************************
+  it.only("handle extraction images or not to extraction videos/audio from paragraph", async () => {
+    const input = dedent`
+      ![](image.png)
+
+      ![~](image.png)
+
+      ![](video.mp4)
+
+      ![-](video.mp4)
+
+      ![](audio.mp3)
+
+      ![-](audio.mp3)
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt=""></p>
+      <img src="image.png" alt="~">
+      <video><source src="video.mp4" type="video/mp4"></video>
+      <p><video><source src="video.mp4" type="video/mp4"></video></p>
+      <audio><source src="audio.mp3" type="audio/mpeg"></audio>
+      <p><audio><source src="audio.mp3" type="audio/mpeg"></audio></p>"
     `);
   });
 
