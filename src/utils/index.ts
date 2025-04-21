@@ -18,3 +18,47 @@ export function appendStyle(
   const base = typeof existing === "string" ? ensureSemiColon(existing) : "";
   return base + ensureSemiColon(patch);
 }
+
+export function parseAltDirective(alt: string): {
+  directive?: string;
+  value?: string;
+} {
+  type DirectiveKey = "plus" | "fig" | "star" | "cap" | "tilda" | "ext" | "minus" | "nox";
+
+  const directives: Record<DirectiveKey, string> = {
+    plus: "+",
+    fig: "fig:",
+    star: "*",
+    cap: "cap:",
+    tilda: "~",
+    ext: "ext:",
+    minus: "-",
+    nox: "nox:",
+  };
+
+  const directiveMap: Record<DirectiveKey, string> = {
+    plus: "directiveFigure",
+    fig: "directiveFigure",
+    star: "directiveCaption",
+    cap: "directiveCaption",
+    tilda: "directiveExtract",
+    ext: "directiveExtract",
+    minus: "directiveNoExtract",
+    nox: "directiveNoExtract",
+  };
+
+  for (const key of Object.keys(directives) as DirectiveKey[]) {
+    const prefix = directives[key];
+    if (alt.startsWith(prefix)) {
+      return {
+        directive: directiveMap[key],
+        value: alt.slice(prefix.length),
+      };
+    }
+  }
+
+  return {
+    directive: undefined,
+    value: undefined,
+  };
+}
