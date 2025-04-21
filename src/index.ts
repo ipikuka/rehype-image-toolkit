@@ -1,22 +1,20 @@
 import type { Plugin } from "unified";
 
+import type { MdxJsxFlowElementHast, MdxJsxTextElementHast } from "mdast-util-mdx-jsx";
 import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
-import type {
-  MdxJsxAttribute,
-  MdxJsxFlowElementHast,
-  MdxJsxTextElementHast,
-} from "mdast-util-mdx-jsx";
 
 import { appendStyle, getExtension } from "./utils/index.js";
 import {
-  getAttributeValue,
-  updateOrAddMdxAttribute,
-  composeAttributeValueExpressionLiteral,
-  composeAttributeValueExpressionStyle,
+  getMdxJsxAttributeValue,
+  updateOrAddMdxJsxAttribute,
+  composeMdxJsxAttributeValueExpressionLiteral,
+  composeMdxJsxAttributeValueExpressionStyle,
+  getMdxJsxAttribute,
+  removeMdxJsxAttribute,
 } from "./utils/util.mdxjsx.js";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
@@ -287,9 +285,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       // Preparation part for adding attributes utilizing title ************************
 
       if (node.properties.title && node.properties.title.includes(">")) {
-        const [title, directive] = node.properties.title.split(">");
-        node.properties.title = title.trim() || undefined;
-        if (directive) node.properties.directiveTitle = directive.trim() || undefined;
+        const [title, directive] = node.properties.title.split(">").map((t) => t.trim());
+        node.properties.title = title || undefined;
+        node.properties.directiveTitle = directive || undefined;
       }
     });
 
@@ -320,13 +318,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for adding figure and caption *****************************
 
-        const altAttribute = node.attributes.find(
-          (attr): attr is MdxJsxAttribute =>
-            attr.type === "mdxJsxAttribute" && attr.name === "alt",
-        );
+        const altAttribute = getMdxJsxAttribute(node.attributes, "alt");
 
         if (altAttribute) {
-          const [type, alt] = getAttributeValue(altAttribute);
+          const [altType, alt] = getMdxJsxAttributeValue(altAttribute);
 
           if (typeof alt === "string") {
             const startsWith = {
@@ -345,16 +340,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
               node.data.directiveCaption = !startsWith.plus ? figcaptionText : undefined;
 
               if (node.name === "img") {
-                if (type === "string") {
-                  altAttribute.value = figcaptionText;
-                } else {
-                  altAttribute.value = composeAttributeValueExpressionLiteral(figcaptionText);
-                }
-              } else {
-                // remove alt attribute if the node is video/audio
-                node.attributes = node.attributes.filter(
-                  (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "alt",
-                );
+                altAttribute.value =
+                  altType === "string"
+                    ? figcaptionText
+                    : composeMdxJsxAttributeValueExpressionLiteral(figcaptionText);
+              } else if (node.name === "video" || node.name === "audio") {
+                node.attributes = removeMdxJsxAttribute(node.attributes, "alt");
               }
             }
           }
@@ -362,27 +353,25 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for adding autolink ***************************************
 
-        const srcAttribute = node.attributes.find(
-          (attr): attr is MdxJsxAttribute =>
-            attr.type === "mdxJsxAttribute" && attr.name === "src",
-        );
+        const srcAttribute = getMdxJsxAttribute(node.attributes, "src");
+        let monitoredSrc;
 
         if (srcAttribute) {
-          const [type, src_] = getAttributeValue(srcAttribute);
+          const [srcType, srcValue] = getMdxJsxAttributeValue(srcAttribute);
 
-          /* v8 ignore next 2*/
-
-          if (typeof src_ === "string") {
-            let src = decodeURI(src_);
+          if (typeof srcValue === "string") {
+            let src = decodeURI(srcValue);
+            monitoredSrc = src;
 
             for (const { wrapper, regex } of SRC_WRAPPERS) {
               if (regex.test(src)) {
                 src = src.slice(1, -1);
+                monitoredSrc = src;
 
-                if (type === "string") {
+                if (srcType === "string") {
                   srcAttribute.value = src;
                 } else {
-                  srcAttribute.value = composeAttributeValueExpressionLiteral(src);
+                  srcAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(src);
                 }
 
                 const isValidAutolink =
@@ -407,11 +396,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for conversion to video/audio ****************************
 
-        if (srcAttribute) {
-          const src = getAttributeValue(srcAttribute)[1];
-
-          /* v8 ignore next */
-          const extension = typeof src === "string" ? getExtension(src) : undefined;
+        if (monitoredSrc) {
+          const extension = getExtension(monitoredSrc);
           const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
           if (needsConversion && node.name === "img") {
@@ -421,32 +407,24 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         // Preparation part for adding attributes utilizing title ************************
 
-        const titleAttribute = node.attributes.find(
-          (attr): attr is MdxJsxAttribute =>
-            attr.type === "mdxJsxAttribute" && attr.name === "title",
-        );
+        const titleAttribute = getMdxJsxAttribute(node.attributes, "title");
 
         if (titleAttribute) {
-          const [type, title] = getAttributeValue(titleAttribute);
+          const [titleType, titleValue] = getMdxJsxAttributeValue(titleAttribute);
 
-          if (typeof title === "string" && title.includes(">")) {
-            const [mainTitle, directive] = title.split(">");
-            const newTitle = mainTitle.trim() || undefined;
+          if (typeof titleValue === "string" && titleValue.includes(">")) {
+            const [title, directive] = titleValue.split(">").map((t) => t.trim());
 
-            if (newTitle) {
-              if (type === "string") {
-                titleAttribute.value = mainTitle.trim();
-              } else {
-                titleAttribute.value = composeAttributeValueExpressionLiteral(mainTitle.trim());
-              }
+            if (title) {
+              titleAttribute.value =
+                titleType === "string"
+                  ? title
+                  : composeMdxJsxAttributeValueExpressionLiteral(title);
             } else {
-              // remove title attribute if it is empty string
-              node.attributes = node.attributes.filter(
-                (attr) => attr.type !== "mdxJsxAttribute" || attr.name !== "title",
-              );
+              node.attributes = removeMdxJsxAttribute(node.attributes, "title");
             }
 
-            node.data.directiveTitle = directive.trim() || undefined;
+            node.data.directiveTitle = directive || undefined;
           }
         }
       },
@@ -871,20 +849,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const [newTagName, extension] = node.data.directiveConversion.split("/");
           node.data.directiveConversion = undefined;
 
-          // TODO look at the src attribute since conversion image to video may blabla...
-          // also autolink uses it
-          const srcAttribute = node.attributes.find(
-            (attr) => attr.type === "mdxJsxAttribute" && attr.name === "src",
-          );
-
-          // TODO
-          const src = srcAttribute?.value;
-
-          node.attributes = node.attributes.filter(
-            (attr) =>
-              attr.type === "mdxJsxAttribute" && attr.name !== "src" && attr.name !== "alt",
-          );
-
+          const srcAttribute = getMdxJsxAttribute(node.attributes, "src");
+          node.attributes = removeMdxJsxAttribute(node.attributes, ["alt", "src"]);
           const attributes = structuredClone(node.attributes);
 
           if (settings.alwaysAddControlsForVideos && newTagName === "video") {
@@ -912,11 +878,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 type: "mdxJsxFlowElement",
                 name: "source",
                 attributes: [
-                  {
-                    type: "mdxJsxAttribute",
-                    name: "src",
-                    value: src,
-                  },
+                  srcAttribute!,
                   {
                     type: "mdxJsxAttribute",
                     name: "type",
@@ -944,36 +906,36 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
             attrs.forEach((attr) => {
               if (attr.startsWith("#")) {
-                updateOrAddMdxAttribute(attributes, "id", attr.slice(1));
+                updateOrAddMdxJsxAttribute(attributes, "id", attr.slice(1));
               } else if (attr.startsWith(".")) {
-                updateOrAddMdxAttribute(attributes, "className", attr.slice(1));
+                updateOrAddMdxJsxAttribute(attributes, "className", attr.slice(1));
               } else if (attr.includes("=")) {
                 const [key, value] = attr.split("=");
                 if (key === "width" || key === "height") {
                   const match = value.match(/^(\d+)(?:px)?$/);
                   if (match) {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       key,
-                      composeAttributeValueExpressionLiteral(Number(match[1])),
+                      composeMdxJsxAttributeValueExpressionLiteral(Number(match[1])),
                     );
                   } else {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       "style",
-                      composeAttributeValueExpressionStyle(`${key}:${value}`),
+                      composeMdxJsxAttributeValueExpressionStyle(`${key}:${value}`),
                     );
                   }
                 } else if (key === "style") {
-                  updateOrAddMdxAttribute(
+                  updateOrAddMdxJsxAttribute(
                     attributes,
                     key,
-                    composeAttributeValueExpressionStyle(value.replaceAll("~", " ")),
+                    composeMdxJsxAttributeValueExpressionStyle(value.replaceAll("~", " ")),
                   );
                 } else if (value === "undefined") {
-                  updateOrAddMdxAttribute(attributes, key, undefined);
+                  updateOrAddMdxJsxAttribute(attributes, key, undefined);
                 } else {
-                  updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
+                  updateOrAddMdxJsxAttribute(attributes, htmlToReactAttrMap[key] || key, value);
                 }
               } else if (attr.includes("x")) {
                 const [width, height] = attr.split("x");
@@ -981,16 +943,16 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 if (width) {
                   const matchWidth = width.match(/^(\d+)(?:px)?$/);
                   if (matchWidth) {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       "width",
-                      composeAttributeValueExpressionLiteral(Number(matchWidth[1])),
+                      composeMdxJsxAttributeValueExpressionLiteral(Number(matchWidth[1])),
                     );
                   } else {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       "style",
-                      composeAttributeValueExpressionStyle(`width:${width}`),
+                      composeMdxJsxAttributeValueExpressionStyle(`width:${width}`),
                     );
                   }
                 }
@@ -998,21 +960,21 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 if (height) {
                   const matchHeight = height.match(/^(\d+)(?:px)?$/);
                   if (matchHeight) {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       "height",
-                      composeAttributeValueExpressionLiteral(Number(matchHeight[1])),
+                      composeMdxJsxAttributeValueExpressionLiteral(Number(matchHeight[1])),
                     );
                   } else {
-                    updateOrAddMdxAttribute(
+                    updateOrAddMdxJsxAttribute(
                       attributes,
                       "style",
-                      composeAttributeValueExpressionStyle(`height:${height}`),
+                      composeMdxJsxAttributeValueExpressionStyle(`height:${height}`),
                     );
                   }
                 }
               } else {
-                updateOrAddMdxAttribute(attributes, htmlToReactAttrMap[attr] || attr, null);
+                updateOrAddMdxJsxAttribute(attributes, htmlToReactAttrMap[attr] || attr, null);
               }
             });
 
@@ -1023,15 +985,11 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // The application part for adding autolink ***********************************
 
         if (node.data?.directiveAutolink) {
-          const srcAttribute = node.attributes.find(
-            (a) => a.type === "mdxJsxAttribute" && a.name === "src",
-          );
-
-          const src = srcAttribute?.value;
-          const marker = node.data.directiveAutolink;
-          node.data.directiveAutolink = undefined;
+          const srcAttribute = getMdxJsxAttribute(node.attributes, "src");
 
           const isFigureParent = isFigureMdxJsxElement(parent);
+          const marker = node.data.directiveAutolink;
+          node.data.directiveAutolink = undefined;
 
           if (isFigureParent && marker === "bracket") {
             // find the parent index so as the anchor covers the parent
@@ -1060,7 +1018,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                     {
                       type: "mdxJsxAttribute",
                       name: "href",
-                      value: src,
+                      value: srcAttribute!.value,
                     },
                     {
                       type: "mdxJsxAttribute",
@@ -1080,7 +1038,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
                 {
                   type: "mdxJsxAttribute",
                   name: "href",
-                  value: src,
+                  value: srcAttribute!.value,
                 },
                 {
                   type: "mdxJsxAttribute",

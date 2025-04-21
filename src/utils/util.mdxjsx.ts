@@ -8,12 +8,21 @@ import type {
   MdxJsxExpressionAttribute,
 } from "mdast-util-mdx-jsx";
 
-export type AttributeValueResult =
+export function getMdxJsxAttribute(
+  attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
+  name: string,
+): MdxJsxAttribute | undefined {
+  return attributes.find(
+    (attr): attr is MdxJsxAttribute => attr.type === "mdxJsxAttribute" && attr.name === name,
+  );
+}
+
+type AttributeValueResult =
   | ["string", string]
   | ["expression", string | number | bigint | boolean | RegExp | null | undefined]
   | ["unknown", undefined];
 
-export function getAttributeValue(attr: MdxJsxAttribute): AttributeValueResult {
+export function getMdxJsxAttributeValue(attr: MdxJsxAttribute): AttributeValueResult {
   if (attr.value && typeof attr.value !== "string") {
     const expression = attr.value.data?.estree?.body?.[0];
 
@@ -30,7 +39,7 @@ export function getAttributeValue(attr: MdxJsxAttribute): AttributeValueResult {
   return ["unknown", undefined];
 }
 
-export function updateOrAddMdxAttribute(
+export function updateOrAddMdxJsxAttribute(
   attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
   name: string,
   value: MdxJsxAttribute["value"],
@@ -59,7 +68,7 @@ export function updateOrAddMdxAttribute(
     return;
   }
 
-  const [existingType, existingValue] = getAttributeValue(existingAttribute);
+  const [existingType, existingValue] = getMdxJsxAttributeValue(existingAttribute);
 
   if (name === "className" && typeof existingValue === "string") {
     const currentClasses = new Set(existingValue.split(/\s+/).filter(Boolean));
@@ -69,7 +78,7 @@ export function updateOrAddMdxAttribute(
     if (existingType === "string") {
       existingAttribute.value = newClassname;
     } else {
-      existingAttribute.value = composeAttributeValueExpressionLiteral(newClassname);
+      existingAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(newClassname);
     }
   } else if (name === "style") {
     if (typeof existingAttribute.value === "object" && typeof value === "object") {
@@ -92,6 +101,17 @@ export function updateOrAddMdxAttribute(
   }
 }
 
+export function removeMdxJsxAttribute(
+  attributes: Array<MdxJsxAttribute | MdxJsxExpressionAttribute>,
+  names: string | string[],
+): Array<MdxJsxAttribute | MdxJsxExpressionAttribute> {
+  const nameSet = new Set(typeof names === "string" ? [names] : names);
+
+  return attributes.filter(
+    (attr) => attr.type !== "mdxJsxAttribute" || !nameSet.has(attr.name),
+  );
+}
+
 function program(body: Program["body"]): Program {
   return {
     type: "Program",
@@ -101,7 +121,7 @@ function program(body: Program["body"]): Program {
   };
 }
 
-export function composeAttributeValueExpressionLiteral(
+export function composeMdxJsxAttributeValueExpressionLiteral(
   value: string | number | boolean,
 ): MdxJsxAttributeValueExpression {
   return {
@@ -128,7 +148,7 @@ function toObjectLiteral(obj: Record<string, unknown>): string {
     .join(",")}}`;
 }
 
-export function composeAttributeValueExpressionStyle(
+export function composeMdxJsxAttributeValueExpressionStyle(
   value: string,
 ): MdxJsxAttributeValueExpression {
   return {
