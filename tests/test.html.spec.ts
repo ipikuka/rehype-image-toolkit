@@ -25,8 +25,8 @@ describe("reyhpe-image-hack, with html sources", () => {
   // *************************************
   it("process html input, handle figure and caption", async () => {
     const input = dedent`
-      <img src="image.png" alt="*Image Caption">
-      <img src="image.png" alt="+Image Alt">
+      <img src="image.png" alt="^Image Caption">
+      <img src="image.png" alt="@Image Alt">
     `;
 
     const html = String(await processHtml(input));
@@ -44,7 +44,7 @@ describe("reyhpe-image-hack, with html sources", () => {
   // *************************************
   it("process html input, handle figure and caption in paragraph", async () => {
     const input = dedent`
-      <p><img src="image.png" alt="*Image Caption"><img src="image.png" alt="+Image Alt"></p>
+      <p><img src="image.png" alt="^Image Caption"><img src="image.png" alt="@Image Alt"></p>
     `;
 
     const html = String(await processHtml(input));
@@ -64,9 +64,9 @@ describe("reyhpe-image-hack, with html sources", () => {
     const input = dedent`
       <h4>Title</h4>
       <p>
-        <img src="image.png" alt="*Image Caption">
+        <img src="image.png" alt="^Image Caption">
       </p>
-      <img src="image.png" alt="+Image Alt">
+      <img src="image.png" alt="@Image Alt">
     `;
 
     const html = String(await processHtml(input));
@@ -84,8 +84,8 @@ describe("reyhpe-image-hack, with html sources", () => {
       <img src="[image.png]" alt="alt">
       <img src="(image.png)" alt="alt">
 
-      <img src="[image.png]" alt="*caption">
-      <img src="(image.png)" alt="*caption">
+      <img src="[image.png]" alt="^caption">
+      <img src="(image.png)" alt="^caption">
     `;
 
     const html = String(await processHtml(input));
@@ -108,7 +108,7 @@ describe("reyhpe-image-hack, with html sources", () => {
       </p>
       <p>
         It adds caption.
-        <img src="image.png" alt="*Image Caption"/>
+        <img src="image.png" alt="^Image Caption"/>
       </p>
       <p>
         It adds attributes.

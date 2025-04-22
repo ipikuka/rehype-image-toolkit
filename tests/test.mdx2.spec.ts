@@ -83,8 +83,8 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       [![]([image.png])](https://example.com)
       [![]((image.png))](https://example.com)
 
-      [![*Caption]([image.png])](https://example.com)
-      [![*Caption]((image.png))](https://example.com)
+      [![^Caption]([image.png])](https://example.com)
+      [![^Caption]((image.png))](https://example.com)
 
       <a href="https://example.com"><img src="[image.png]" alt=""/></a>
       <a href="https://example.com"><img src="(image.png)" alt=""/></a>
@@ -92,8 +92,8 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       here is the image <a href="https://example.com"><img src="[image.png]" alt=""/></a>
       here is the image <a href="https://example.com"><img src="(image.png)" alt=""/></a>
 
-      <a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a>
-      <a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a>
+      <a href="https://example.com"><img src="[image.png]" alt="^Caption"/></a>
+      <a href="https://example.com"><img src="(image.png)" alt="^Caption"/></a>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
@@ -161,14 +161,14 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   it("MDX source, autolinks && caption already in a link and/or a figure - 3", async () => {
     const input = dedent`
       <a href="https://example.com">
-        <figure><img src="[image.png]" alt="*Caption"/></figure>
+        <figure><img src="[image.png]" alt="^Caption"/></figure>
       </a>
       <a href="https://example.com">
-        <figure><img src="(image.png)" alt="*Caption"/></figure>
+        <figure><img src="(image.png)" alt="^Caption"/></figure>
       </a>
       
-      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a></figure>
-      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="^Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="^Caption"/></a></figure>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
@@ -193,14 +193,14 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, autolinks && does NOT add figure due to be in a figure already", async () => {
     const input = dedent`
-      <figure><img src="image.png" alt="+Caption"/></figure>
-      <figure><img src="image.png" alt="*Caption"/></figure>
+      <figure><img src="image.png" alt="@Caption"/></figure>
+      <figure><img src="image.png" alt="^Caption"/></figure>
 
-      <figure><img src="[image.png]" alt="+Caption"/></figure>
-      <figure><img src="[image.png]" alt="*Caption"/></figure>
+      <figure><img src="[image.png]" alt="@Caption"/></figure>
+      <figure><img src="[image.png]" alt="^Caption"/></figure>
       
-      <figure><img src="(image.png)" alt="+Caption"/></figure>
-      <figure><img src="(image.png)" alt="*Caption"/></figure>
+      <figure><img src="(image.png)" alt="@Caption"/></figure>
+      <figure><img src="(image.png)" alt="^Caption"/></figure>
     `;
 
     const output = `
@@ -219,14 +219,14 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, autolinks && does NOT add figure due to be in a figure already, figcaption is above", async () => {
     const input = dedent`
-      <figure><img src="image.png" alt="+Caption"/></figure>
-      <figure><img src="image.png" alt="*Caption"/></figure>
+      <figure><img src="image.png" alt="@Caption"/></figure>
+      <figure><img src="image.png" alt="^Caption"/></figure>
 
-      <figure><img src="[image.png]" alt="+Caption"/></figure>
-      <figure><img src="[image.png]" alt="*Caption"/></figure>
+      <figure><img src="[image.png]" alt="@Caption"/></figure>
+      <figure><img src="[image.png]" alt="^Caption"/></figure>
       
-      <figure><img src="(image.png)" alt="+Caption"/></figure>
-      <figure><img src="(image.png)" alt="*Caption"/></figure>
+      <figure><img src="(image.png)" alt="@Caption"/></figure>
+      <figure><img src="(image.png)" alt="^Caption"/></figure>
     `;
 
     const output = `
@@ -250,17 +250,17 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for images", async () => {
     const input = dedent`
-      ![+Hello](image.png)
+      ![@Hello](image.png)
 
-      ![*Hello](image.png)
+      ![^Hello](image.png)
 
-      ![caption:Hello](image.png)
+      ![c:Hello](image.png)
 
-      <img src="image.png" alt="+Hello"/>
+      <img src="image.png" alt="@Hello"/>
 
-      <img src="image.png" alt="*Hello"/>
+      <img src="image.png" alt="^Hello"/>
 
-      <img src="image.png" alt="caption:Hello"/>
+      <img src="image.png" alt="c:Hello"/>
     `;
 
     const output = `
@@ -279,23 +279,23 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for videos and images to be converted into videos", async () => {
     const input = dedent`
-      ![+Hello](video.mp4)
+      ![@Hello](video.mp4)
 
-      ![*Hello](video.mp4)
+      ![^Hello](video.mp4)
 
-      ![caption:Hello](video.mp4)
+      ![c:Hello](video.mp4)
 
-      <img src="video.mp4" alt="+Hello"/>
+      <img src="video.mp4" alt="@Hello"/>
 
-      <img src="video.mp4" alt="*Hello"/>
+      <img src="video.mp4" alt="^Hello"/>
 
-      <img src="video.mp4" alt="caption:Hello"/>
+      <img src="video.mp4" alt="c:Hello"/>
 
-      <video src="video.mp4" alt="+Hello"></video>
+      <video src="video.mp4" alt="@Hello"></video>
 
-      <video src="video.mp4" alt="*Hello"></video>
+      <video src="video.mp4" alt="^Hello"></video>
 
-      <video src="video.mp4" alt="caption:Hello"></video>
+      <video src="video.mp4" alt="c:Hello"></video>
     `;
 
     const output = `
@@ -317,23 +317,23 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for audio and images to be converted into audio", async () => {
     const input = dedent`
-      ![+Hello](audio.mp3)
+      ![@Hello](audio.mp3)
 
-      ![*Hello](audio.mp3)
+      ![^Hello](audio.mp3)
 
-      ![caption:Hello](audio.mp3)
+      ![c:Hello](audio.mp3)
 
-      <img src="audio.mp3" alt="+Hello"/>
+      <img src="audio.mp3" alt="@Hello"/>
 
-      <img src="audio.mp3" alt="*Hello"/>
+      <img src="audio.mp3" alt="^Hello"/>
 
-      <img src="audio.mp3" alt="caption:Hello"/>
+      <img src="audio.mp3" alt="c:Hello"/>
 
-      <audio src="audio.mp3" alt="+Hello"></audio>
+      <audio src="audio.mp3" alt="@Hello"></audio>
 
-      <audio src="audio.mp3" alt="*Hello"></audio>
+      <audio src="audio.mp3" alt="^Hello"></audio>
 
-      <audio src="audio.mp3" alt="caption:Hello"></audio>
+      <audio src="audio.mp3" alt="c:Hello"></audio>
     `;
 
     const output = `
@@ -439,14 +439,14 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     const input = dedent`
       <img src={"image.png"}/>
       <img src={"image.png"} alt={""}/>
-      <img src={"image.png"} alt={"+Caption"}/>
-      <img src={"image.png"} alt={"*Caption"}/>
+      <img src={"image.png"} alt={"@Caption"}/>
+      <img src={"image.png"} alt={"^Caption"}/>
       <img src={"(image.png)"} alt={""}/>
-      <img src={"(image.png)"} alt={"+Caption"}/>
-      <img src={"(image.png)"} alt={"*Caption"}/>
+      <img src={"(image.png)"} alt={"@Caption"}/>
+      <img src={"(image.png)"} alt={"^Caption"}/>
       <img src={"[image.png]"} alt={""}/>
-      <img src={"[image.png]"} alt={"+Caption"}/>
-      <img src={"[image.png]"} alt={"*Caption"}/>
+      <img src={"[image.png]"} alt={"@Caption"}/>
+      <img src={"[image.png]"} alt={"^Caption"}/>
     `;
 
     expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
@@ -484,8 +484,8 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("fix it !", async () => {
     const input = dedent`
-      <figure><a href="https://example.com"><img src="[image.png]" alt="*Caption"/></a></figure>
-      <figure><a href="https://example.com"><img src="(image.png)" alt="*Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="[image.png]" alt="^Caption"/></a></figure>
+      <figure><a href="https://example.com"><img src="(image.png)" alt="^Caption"/></a></figure>
     `;
 
     expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`

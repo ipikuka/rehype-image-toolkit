@@ -22,16 +22,6 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     const html = await processMdx(input, "mdx");
 
-    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p><img src="" alt="" /></p>
-      <p><img src="image.png" alt="" /></p>
-      <video><source src="video.mp4" type="video/mp4" /></video>
-      <audio><source src="audio.mp3" type="audio/mpeg" /></audio>
-      <p><img src="unknown.xxx" alt="" /></p>
-      <p><img src="invalid" alt="" /></p>
-      "
-    `);
-
     expect(html).toMatchInlineSnapshot(`
       "<p><img src="" alt=""/></p>
       <p><img src="image.png" alt=""/></p>
@@ -45,7 +35,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle basic paragraph that consists of images to be transformed to videos/audio", async () => {
     const input = dedent`
-      See the figure below. ![*Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      See the figure below. ![^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
       You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
     `;
 
@@ -63,19 +53,50 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
+  it("handle extraction images or not to extraction videos/audio from paragraph", async () => {
+    const input = dedent`
+      ![](image.png)
+
+      ![&](image.png)
+
+      ![](video.mp4)
+
+      ![~](video.mp4)
+
+      ![](audio.mp3)
+
+      ![~](audio.mp3)
+    `;
+
+    const html = await processMdx(input, "mdx");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt=""/></p>
+      <img src="image.png" alt=""/>
+      <video><source src="video.mp4" type="video/mp4"/></video>
+      <p><video><source src="video.mp4" type="video/mp4"/></video></p>
+      <audio><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <p><audio><source src="audio.mp3" type="audio/mpeg"/></audio></p>"
+    `);
+  });
+
+  // ******************************************
   it("handle adding caption for images", async () => {
     const input = dedent`
-      ![+Hello](image.png)
+      ![@Hello](image.png)
 
-      ![*Hello](image.png)
+      ![f:Hello](image.png)
 
-      ![caption:Hello](image.png)
+      ![^Hello](image.png)
+
+      ![c:Hello](image.png)
     `;
 
     const html = await processMdx(input, "mdx");
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<figure><img src="image.png" alt="Hello" /></figure>
+      <figure><img src="image.png" alt="Hello" /></figure>
       <figure>
         <img src="image.png" alt="Hello" />
         <figcaption>Hello</figcaption>
@@ -89,6 +110,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     expect(html).toMatchInlineSnapshot(`
       "<figure><img src="image.png" alt="Hello"/></figure>
+      <figure><img src="image.png" alt="Hello"/></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>
       <figure><img src="image.png" alt="Hello"/><figcaption>Hello</figcaption></figure>"
     `);
@@ -97,11 +119,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption above for images", async () => {
     const input = dedent`
-      ![+Hello](image.png)
+      ![@Hello](image.png)
 
-      ![*Hello](image.png)
+      ![^Hello](image.png)
 
-      ![caption:Hello](image.png)
+      ![c:Hello](image.png)
     `;
 
     const html = await processMdx(input, "mdx", { figureCaptionPosition: "above" });
@@ -129,11 +151,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for videos", async () => {
     const input = dedent`
-      ![+Hello](video.mp4)
+      ![@Hello](video.mp4)
 
-      ![*Hello](video.mp4)
+      ![^Hello](video.mp4)
 
-      ![caption:Hello](video.mp4)
+      ![c:Hello](video.mp4)
     `;
 
     const html = await processMdx(input, "mdx");
@@ -163,11 +185,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for audio", async () => {
     const input = dedent`
-      ![+Hello](audio.mp3)
+      ![@Hello](audio.mp3)
 
-      ![*Hello](audio.mp3)
+      ![^Hello](audio.mp3)
 
-      ![caption:Hello](audio.mp3)
+      ![c:Hello](audio.mp3)
     `;
 
     const html = await processMdx(input, "mdx");
@@ -223,11 +245,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for images/videos/audio, the last element", async () => {
     const input = dedent`
-      Here is the image ![*Caption of the image](image.png "title")
+      Here is the image ![^Caption of the image](image.png "title")
 
-      Here is the video ![*Caption of the video](video.mp4 "title")
+      Here is the video ![^Caption of the video](video.mp4 "title")
 
-      Here is the audio ![*Caption of the audio](audio.mp3 "title")
+      Here is the audio ![^Caption of the audio](audio.mp3 "title")
     `;
 
     const html = await processMdx(input, "mdx");
@@ -298,11 +320,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption, in the middle", async () => {
     const input = dedent`
-      Hi ![*Caption of the image](image.png "title") text
+      Hi ![^Caption of the image](image.png "title") text
 
-      Hi ![*Caption of the video](video.mp4 "title") text
+      Hi ![^Caption of the video](video.mp4 "title") text
 
-      Hi ![*Caption of the audio](audio.mp3 "title") text
+      Hi ![^Caption of the audio](audio.mp3 "title") text
     `;
 
     const html = await processMdx(input, "mdx");
@@ -395,9 +417,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption, in html <img/>, <video>, and <audio>", async () => {
     const input = dedent`
-      <img alt="*Image Caption" src="image.png"/>
-      <video alt="*Video Caption" src="video.mp4"></video>
-      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+      <img alt="^Image Caption" src="image.png"/>
+      <video alt="^Video Caption" src="video.mp4"></video>
+      <audio alt="^Audio Caption" src="audio.mp3"></audio>
     `;
 
     const html = await processMdx(input, "mdx");
@@ -428,11 +450,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption, in html <img/>, <video>, and <audio>, extract audio/video from paragraph due to blank lines", async () => {
     const input = dedent`
-      <img alt="*Image Caption" src="image.png"/>
+      <img alt="^Image Caption" src="image.png"/>
 
-      <video alt="*Video Caption" src="video.mp4"></video>
+      <video alt="^Video Caption" src="video.mp4"></video>
 
-      <audio alt="*Audio Caption" src="audio.mp3"></audio>
+      <audio alt="^Audio Caption" src="audio.mp3"></audio>
     `;
 
     const html = await processMdx(input, "mdx");
@@ -463,11 +485,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding figure with no caption, in html <img/>, <video>, and <audio>", async () => {
     const input = dedent`
-      <img alt="+" src="image.png"/>
+      <img alt="@" src="image.png"/>
 
-      <video alt="+" src="video.mp4"></video>
+      <video alt="@" src="video.mp4"></video>
 
-      <audio alt="+" src="audio.mp3"></audio>
+      <audio alt="@" src="audio.mp3"></audio>
     `;
 
     const html = await processMdx(input, "mdx");
@@ -489,11 +511,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding figure for images/videos/audio in blockquotes", async () => {
     const input = dedent`
-      > Here is the image. ![*Image Caption](image.png)
+      > Here is the image. ![^Image Caption](image.png)
       >
-      > Here is the video. ![*Video Caption](video.mp4)
+      > Here is the video. ![^Video Caption](video.mp4)
       >
-      > Here is the audio. ![*Audio Caption](audio.mp3)
+      > Here is the audio. ![^Audio Caption](audio.mp3)
     `;
 
     const html = await processMdx(input, "mdx", {
@@ -537,11 +559,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding figure for html images/videos/audio in blockquotes", async () => {
     const input = dedent`
-      > Here is the image. <img src="image.png" alt="*Image Caption"/>
+      > Here is the image. <img src="image.png" alt="^Image Caption"/>
       >
-      > Here is the video. <img src="video.mp4" alt="*Video Caption"/>
+      > Here is the video. <img src="video.mp4" alt="^Video Caption"/>
       >
-      > Here is the audio. <img src="audio.mp3" alt="*Audio Caption"/>
+      > Here is the audio. <img src="audio.mp3" alt="^Audio Caption"/>
     `;
 
     const html = await processMdx(input, "mdx", {
@@ -586,11 +608,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle html <image>, <video> and <audio> in blockquotes", async () => {
     const input = dedent`
-      > Here is the image. <img alt="*Image Caption" src="image.png"/>
+      > Here is the image. <img alt="^Image Caption" src="image.png"/>
       >
-      > Here is the video. <video alt="*Video Caption" src="video.mp4"/>
+      > Here is the video. <video alt="^Video Caption" src="video.mp4"/>
       >
-      > Here is the audio. <audio alt="*Audio Caption" src="audio.mp3"/>
+      > Here is the audio. <audio alt="^Audio Caption" src="audio.mp3"/>
     `;
 
     const html = await processMdx(input, "mdx");
@@ -820,11 +842,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle transformation to videos/audio; and handle adding figure already wrapped with a link ", async () => {
     const input = dedent`
-      [![+](image.png)](https://example.com)
+      [![@](image.png)](https://example.com)
 
-      [![+](video.mp4)](https://example.com)
+      [![@](video.mp4)](https://example.com)
 
-      [![+](audio.mp3)](https://example.com)
+      [![@](audio.mp3)](https://example.com)
     `;
 
     const html = await processMdx(input, "mdx");
@@ -856,9 +878,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
       ![]([image.png]) 
       
-      ![+alt]([image.png])
+      ![@alt]([image.png])
 
-      ![*caption]([image.png])
+      ![^caption]([image.png])
     `;
 
     const html = await processMdx(input, "mdx");
@@ -891,9 +913,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
       ![]((image.png)) 
       
-      ![+alt]((image.png))
+      ![@alt]((image.png))
 
-      ![*caption]((image.png))
+      ![^caption]((image.png))
     `;
 
     const html = await processMdx(input, "mdx");
@@ -942,9 +964,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
-      Hi [![+alt]([image.png])](https://example.com) text
+      Hi [![@alt]([image.png])](https://example.com) text
 
-      Hi [![*alt]([image.png])](https://example.com) text
+      Hi [![^alt]([image.png])](https://example.com) text
     `;
 
     const html = await processMdx(input, "mdx");
@@ -979,17 +1001,22 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink, but add caption; which is already wrapped with a link", async () => {
     const input = dedent`
-      [![+alt]([image.png])](https://example.com)
+      [![@alt]([image.png])](https://example.com)
 
-      [![*alt]([image.png])](https://example.com)
+      [![f:alt]([image.png])](https://example.com)
 
-      [![caption:alt]([image.png])](https://example.com)
+      [![^alt]([image.png])](https://example.com)
+
+      [![c:alt]([image.png])](https://example.com)
     `;
 
     const html = await processMdx(input, "mdx");
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<a href="https://example.com"
+        ><figure><img src="image.png" alt="alt" /></figure
+      ></a>
+      <a href="https://example.com"
         ><figure><img src="image.png" alt="alt" /></figure
       ></a>
       <a href="https://example.com"
@@ -1009,6 +1036,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     expect(html).toMatchInlineSnapshot(`
       "<a href="https://example.com"><figure><img src="image.png" alt="alt"/></figure></a>
+      <a href="https://example.com"><figure><img src="image.png" alt="alt"/></figure></a>
       <a href="https://example.com"><figure><img src="image.png" alt="alt"/><figcaption>alt</figcaption></figure></a>
       <a href="https://example.com"><figure><img src="image.png" alt="alt"/><figcaption>alt</figcaption></figure></a>"
     `);
@@ -1021,9 +1049,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
       ![]([audio.mp3])
 
-      ![+]((video.mp4))
+      ![@]((video.mp4))
 
-      ![+]((audio.mp3))
+      ![@]((audio.mp3))
     `;
 
     const html = await processMdx(input, "mdx");
@@ -1051,11 +1079,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
-      [![+]([video.mp4])](www.example.com)
+      [![@]([video.mp4])](www.example.com)
 
-      [![+]([audio.mp3])](www.example.com)
+      [![@]([audio.mp3])](www.example.com)
 
-      [![+]([image.png]) ![+]([video.mp4]) ![+]([video.mp3])](www.example.com)
+      [![@]([image.png]) ![@]([video.mp4]) ![@]([video.mp3])](www.example.com)
 
       [![]([image.png]) ![]([video.mp4]) ![]([video.mp3])](www.example.com)
     `;
@@ -1100,7 +1128,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
     ![]([../image.jpeg])
 
-    ![*Hello]([../image.jpeg])
+    ![^Hello]([../image.jpeg])
   `;
 
     const html = await processMdx(input, "mdx");
@@ -1127,7 +1155,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
       It adds autolink. ![alt]([https://example.com/image.png])
 
-      It adds caption. ![*Image Caption](image.png)
+      It adds caption. ![^Image Caption](image.png)
 
       It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
     `;
