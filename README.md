@@ -8,23 +8,23 @@
 [![typescript][badge-typescript]][url-typescript]
 [![license][badge-license]][url-license]
 
-This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, extracting images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.**
+This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, unwrapping images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.**
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
-Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption, and extracting media from paragraph.
+Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption, and unwrapping media from paragraph.
 
 ## When should I use this?
 
-From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or extracting from paragraph. In some cases, I need more control—certain images should be excluded from these transformations.
+From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph. In some cases, I need more control—certain images should be excluded from these transformations.
 
 That's why I ensured each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
 
 **`rehype-image-hack`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
 + **styling and adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
-+ **wrapping with `<figure>` and adding caption** – Easily wrap in a `<figure>` element with an optional caption.
-+ **extracting media from paragraph** – Control which images to be or NOT to be extracted from paragraph.
++ **adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
++ **unwrapping media from paragraph** – Control which images/videos/audio to be or NOT to be extracted from paragraph.
 + **adding autolink to the original image** - Control which images to be automatically linked to their original source.
 
 ## Installation
@@ -50,9 +50,9 @@ It ensures adding videos/audio using image syntax. ![](video.mp4)
 
 It adds autolink to original. ![alt]([https://example.com/image.png])
 
-It wraps with figure and adds caption. ![*Image Caption](image.png)
+It adds figure and caption. ![^Image Caption](image.png)
 
-It extracts images from paragraph ![~alt](image.png)
+It unwraps images from paragraph ![&alt](image.png)
 
 It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
 ```
@@ -95,7 +95,7 @@ TODO:
     <img src="https://example.com/image.png" alt="alt"/>
   </a>
 </p>
-<p>It wraps with figure and adds caption.</p>
+<p>It adds figure and caption.</p>
 <figure>
   <img src="image.png" alt="Image Caption" />
   <figcaption>Image Caption</figcaption>
@@ -116,7 +116,7 @@ Without `rehype-image-hack` the output would be:
   It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
 </p>
 <p>
-  It wraps with figure and adds caption. <img src="image.png" alt="*Image Caption" />
+  It wraps with figure and adds caption. <img src="image.png" alt="^Image Caption" />
 </p>
 <p>
   It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay" />
@@ -136,7 +136,7 @@ Say `example.html` looks as follows:
 </p>
 <p>
   It wraps with figure and adds caption.
-  <img src="image.png" alt="*Image Caption"/>
+  <img src="image.png" alt="^Image Caption"/>
 </p>
 <p>
   It adds attributes.
@@ -211,7 +211,7 @@ Markdown lacks built-in support for video and audio, only providing image syntax
 </audio>
 ```
 
-Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** extracts them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **minus** in the begining of alt **`![-](example.mp3)`**. It may be useful if your intention is the audio to be an inline element in support of CSS.
+Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~-~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
 
 ### Use the `title` attribute to customize images, videos, and audio
 
@@ -294,8 +294,8 @@ Wrapping the source attribute with brackets or parentheses produces mostly the s
 + Wrapping the source attribute **with parentheses** provides autolinking for only the `<img>` element in the `<figure>`.
 
 ```markdown
-![*caption]([image.png])
-![*caption]((image.png))
+![^caption]([image.png])
+![^caption]((image.png))
 ```
 will produce:
 ```html
@@ -315,7 +315,7 @@ will produce:
 
 if you want to set different target for the `<figure>` and for the `<img>` inside, you can wrap the `src` attribute with **parentheses**, not brackets, and use the formal link syntax of markdown together:
 ```markdown
-[![*caption]((image.png))](https://example.com)
+[![^caption]((image.png))](https://example.com)
 ```
 will produce:
 ```html
@@ -336,12 +336,12 @@ According to the HTML specification, **anchor elements cannot be nested**. Despi
 
 ### Add caption for images/videos/audio (Explicit Figure)
 
-Add a **star `*`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element adding a figure caption.
+Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element adding a caption.
 
-Since `<figure>` is block-level element by default, **`rehype-image-hack`** extracts it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
+Since `<figure>` is block-level element by default, **`rehype-image-hack`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
 
 ```markdown
-![*Caption of the image](image.png "title")
+![^Caption of the image](image.png "title")
 ```
 
 will produce the html output:
@@ -353,12 +353,12 @@ will produce the html output:
 </figure>
 ```
 
-Add a **plus `+`** special directive at the start of the **alt** attribute in order to wrap the asset with `<figure>` element but NOT to include a figure caption.
+Add a **at sign `@`** special directive at the start of the **alt** attribute in order to only wrap the asset with `<figure>` element but NOT to include a caption.
 
 ```markdown
-![+alt](image.png "title")
+![@alt](image.png "title")
 
-![+](video.mp4 "title")
+![@](video.mp4 "title")
 ```
 
 will produce the html output *(notice there is no caption)*:
@@ -374,26 +374,26 @@ will produce the html output *(notice there is no caption)*:
 </figure>
 ```
 
-If you want just a regular inline image, do not use any **`*`** or **`+`** directives in the begining of **alt** attribute.
+If you want just a regular inline image, do not use any **`^`** or **`@`** directives in the begining of **alt** attribute.
 
 ```markdown
 ![This image won't be within a figure element](image.png)
 ```
 
-### Extract images or Do Not Extract videos/audio from parapraph
+### Unwrap images from parapraph or Keep inline videos/audio in parapraph
 
-Add a **tilda `~`** special directive at the start of the **alt** attribute in order to extract the image from paragraph. Sometime you may want to extract images without wrapping it in a `<figure>` which is going to be extracted for sure. This directive ensures the image is extracted without wrapping it with figure.
+Add a **ampersand `&`** special directive at the start of the **alt** attribute in order to unwrap the image from paragraph. Sometime you may want to unwrap images without adding it in a `<figure>`. This directive ensures the image is extracted without adding it in a figure.
 
 ```markdown
-![~](image.png)
+![&](image.png)
 
-![~alt](image.png)
+![&alt](image.png)
 ```
 
-Add a **minus `-`** special directive at the start of the **alt** attribute in order to prevent extraction of videos or audio from a paragraph.  This is helpful when you want these elements to remain inline and not treated as separate blocks.
+Add a **tilda `~`** special directive at the start of the **alt** attribute in order to to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-hack`** unwraps videos/audio from paragraph by default.
 
 ```markdown
-![-](audio.mp3)
+Here is the cat voice ![~](cat.mp3). So nice !
 ```
 
 ## Summary table of directives
@@ -516,7 +516,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 - [`rehype-code-meta`](https://www.npmjs.com/package/rehype-code-meta)
   – Rehype plugin to copy `code.data.meta` to `code.properties.metastring`
 - [`rehype-image-hack`](https://www.npmjs.com/package/rehype-image-hack)
-  – Rehype plugin to enhance Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, extracting images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.
+  – Rehype plugin to enhance Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, unwrapping images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.
 
 ### My Recma Plugins
 
