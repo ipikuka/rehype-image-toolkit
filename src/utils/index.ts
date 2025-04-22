@@ -23,37 +23,21 @@ export function parseAltDirective(alt: string): {
   directive?: string;
   value?: string;
 } {
-  type DirectiveKey = "plus" | "fig" | "star" | "cap" | "tilda" | "ext" | "minus" | "nox";
-
-  const directives: Record<DirectiveKey, string> = {
-    plus: "+",
-    fig: "fig:",
-    star: "*",
-    cap: "cap:",
-    tilda: "~",
-    ext: "ext:",
-    minus: "-",
-    nox: "nox:",
+  const directiveMap: Record<string, string[]> = {
+    directiveFigureCaption: ["^", "c:", "figcap:"], // caption inside figure
+    directiveOnlyFigure: ["@", "f:", "figure:"], // figure only, no caption
+    directiveUnwrap: ["&", "u:", "unwrap:"], // extract from paragraph
+    directiveInline: ["~", "i:", "inline:"], // stay inline
   };
 
-  const directiveMap: Record<DirectiveKey, string> = {
-    plus: "directiveFigure",
-    fig: "directiveFigure",
-    star: "directiveCaption",
-    cap: "directiveCaption",
-    tilda: "directiveExtract",
-    ext: "directiveExtract",
-    minus: "directiveNoExtract",
-    nox: "directiveNoExtract",
-  };
-
-  for (const key of Object.keys(directives) as DirectiveKey[]) {
-    const prefix = directives[key];
-    if (alt.startsWith(prefix)) {
-      return {
-        directive: directiveMap[key],
-        value: alt.slice(prefix.length),
-      };
+  for (const [directive, prefixes] of Object.entries(directiveMap)) {
+    for (const prefix of prefixes) {
+      if (alt.startsWith(prefix)) {
+        return {
+          directive,
+          value: alt.slice(prefix.length),
+        };
+      }
     }
   }
 
