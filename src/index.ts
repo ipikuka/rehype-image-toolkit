@@ -7,7 +7,7 @@ import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
 
-import { appendStyle, getExtension } from "./utils/index.js";
+import { appendStyle, getExtension, parseAltDirective } from "./utils/index.js";
 import {
   getMdxJsxAttributeValue,
   updateOrAddMdxJsxAttribute,
@@ -31,6 +31,8 @@ declare module "hast" {
     directiveCaption?: string;
     directiveConversion?: string;
     directiveTitle?: string;
+    directiveUnwrap?: boolean;
+    directiveInline?: boolean;
   }
 }
 
@@ -41,13 +43,18 @@ declare module "mdast-util-mdx-jsx" {
     directiveCaption?: string;
     directiveConversion?: string;
     directiveTitle?: string;
+    directiveUnwrap?: boolean;
+    directiveInline?: boolean;
   }
+
   interface MdxJsxTextElementHastData {
     directiveAutolink?: "bracket" | "parenthesis";
     directiveFigure?: boolean;
     directiveCaption?: string;
     directiveConversion?: string;
     directiveTitle?: string;
+    directiveUnwrap?: boolean;
+    directiveInline?: boolean;
   }
 }
 
@@ -218,26 +225,37 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         return;
       }
 
-      // Preparation part for adding figure and caption *****************************
+      // Preparation part for adding figure and caption; also unwrapping **************
 
       if (node.properties.alt) {
         const alt = node.properties.alt;
+        const { directive, value } = parseAltDirective(alt);
 
-        const startsWith = {
-          plus: alt.startsWith("+"),
-          star: alt.startsWith("*"),
-          caption: alt.startsWith("caption:"),
-        };
+        if (directive) {
+          node.properties.alt = node.tagName === "img" ? value! : undefined;
+        }
 
-        if (startsWith.plus || startsWith.star || startsWith.caption) {
-          const isFigureParent = isFigureElement(parent);
-          if (!isFigureParent) node.properties.directiveFigure = true;
+        switch (directive) {
+          case "directiveFigureCaption":
+            node.properties.directiveCaption = value;
+            if (!isFigureElement(parent)) {
+              node.properties.directiveFigure = true;
+            }
+            break;
 
-          const figcaptionText =
-            startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
+          case "directiveOnlyFigure":
+            if (!isFigureElement(parent)) {
+              node.properties.directiveFigure = true;
+            }
+            break;
 
-          node.properties.directiveCaption = !startsWith.plus ? figcaptionText : undefined;
-          node.properties.alt = node.tagName === "img" ? figcaptionText : undefined;
+          case "directiveUnwrap":
+            node.properties.directiveUnwrap = true;
+            break;
+
+          case "directiveInline":
+            node.properties.directiveInline = true;
+            break;
         }
       }
 
@@ -313,10 +331,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           return;
         }
 
-        // just for narrowing the type since node.data has always {_mdxExplicitJsx: true}
+        // just for type narrowing [node.data has always {_mdxExplicitJsx: true}]
         node.data ??= {};
 
-        // Preparation part for adding figure and caption *****************************
+        // Preparation part for adding figure and caption; also unwrapping **************
 
         const altAttribute = getMdxJsxAttribute(node.attributes, "alt");
 
@@ -324,29 +342,40 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
           const [altType, alt] = getMdxJsxAttributeValue(altAttribute);
 
           if (typeof alt === "string") {
-            const startsWith = {
-              plus: alt.startsWith("+"),
-              star: alt.startsWith("*"),
-              caption: alt.startsWith("caption:"),
-            };
+            const { directive, value } = parseAltDirective(alt);
 
-            if (startsWith.plus || startsWith.star || startsWith.caption) {
-              const isFigureParent = isFigureMdxJsxElement(parent);
-              if (!isFigureParent) node.data.directiveFigure = true;
-
-              const figcaptionText =
-                startsWith.plus || startsWith.star ? alt.slice(1) : alt.slice(8);
-
-              node.data.directiveCaption = !startsWith.plus ? figcaptionText : undefined;
-
+            if (directive) {
               if (node.name === "img") {
                 altAttribute.value =
                   altType === "string"
-                    ? figcaptionText
-                    : composeMdxJsxAttributeValueExpressionLiteral(figcaptionText);
+                    ? value!
+                    : composeMdxJsxAttributeValueExpressionLiteral(value!);
               } else if (node.name === "video" || node.name === "audio") {
                 node.attributes = removeMdxJsxAttribute(node.attributes, "alt");
               }
+            }
+
+            switch (directive) {
+              case "directiveFigureCaption":
+                node.data.directiveCaption = value!;
+                if (!isFigureMdxJsxElement(parent)) {
+                  node.data.directiveFigure = true;
+                }
+                break;
+
+              case "directiveOnlyFigure":
+                if (!isFigureMdxJsxElement(parent)) {
+                  node.data.directiveFigure = true;
+                }
+                break;
+
+              case "directiveUnwrap":
+                node.data.directiveUnwrap = true;
+                break;
+
+              case "directiveInline":
+                node.data.directiveInline = true;
+                break;
             }
           }
         }
@@ -506,8 +535,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       function isRelevantElement(element: ElementContent) {
         if (element.type !== "element") return false;
 
-        const isVideo = element.tagName === "video";
-        const isAudio = element.tagName === "audio";
+        const isVideo = element.tagName === "video" && !element.properties.directiveInline;
+        const isAudio = element.tagName === "audio" && !element.properties.directiveInline;
         const isFigure = element.tagName === "figure";
 
         const isRelevantImage = element.tagName === "img" && isMarkedElement(element);
@@ -518,11 +547,14 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             return (
               child.type === "element" &&
               ((child.tagName === "img" && isMarkedElement(child)) ||
-                child.tagName === "video" ||
-                child.tagName === "audio" ||
+                (child.tagName === "video" && !element.properties.directiveInline) ||
+                (child.tagName === "audio" && !element.properties.directiveInline) ||
                 child.tagName === "figure")
             );
           });
+
+        element.properties.directiveUnwrap = undefined;
+        element.properties.directiveInline = undefined;
 
         return isVideo || isAudio || isFigure || isRelevantImage || isRelevantAnchor;
       }
@@ -530,14 +562,19 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       function isMarkedElement(el: ElementContent | undefined | null) {
         /* v8 ignore next */
         if (!el || !("properties" in el)) return false;
-        return el.properties.directiveFigure || el.properties.directiveConversion;
+        return (
+          !el.properties.directiveInline &&
+          (el.properties.directiveUnwrap ||
+            el.properties.directiveFigure ||
+            el.properties.directiveConversion)
+        );
       }
 
       function isRelevantMdxJsxElement(element: ElementContent) {
         if (!isMdxJsxElement(element)) return false;
 
-        const isVideo = element.name === "video";
-        const isAudio = element.name === "audio";
+        const isVideo = element.name === "video" && !element.data?.directiveInline;
+        const isAudio = element.name === "audio" && !element.data?.directiveInline;
         const isFigure = element.name === "figure";
 
         const isRelevantImage = element.name === "img" && isMarkedMdxJsxElement(element);
@@ -548,8 +585,8 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
             return (
               isMdxJsxElement(child) &&
               ((child.name === "img" && isMarkedMdxJsxElement(child)) ||
-                child.name === "video" ||
-                child.name === "audio" ||
+                (child.name === "video" && !element.data?.directiveInline) ||
+                (child.name === "audio" && !element.data?.directiveInline) ||
                 child.name === "figure")
             );
           });
@@ -560,7 +597,10 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       function isMarkedMdxJsxElement(el: ElementContent | undefined | null) {
         /* v8 ignore next */
         if (!el || !("attributes" in el)) return false;
-        return el.data?.directiveFigure || el.data?.directiveConversion;
+        return (
+          !el.data?.directiveInline &&
+          (el.data?.directiveUnwrap || el.data?.directiveFigure || el.data?.directiveConversion)
+        );
       }
     });
 
