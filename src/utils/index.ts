@@ -24,8 +24,8 @@ export function parseAltDirective(alt: string): {
   value?: string;
 } {
   const directiveMap: Record<string, string[]> = {
+    directiveOnlyFigure: ["^^", "f:", "figure:"], // figure only, no caption
     directiveFigureCaption: ["^", "c:", "figcap:"], // caption inside figure
-    directiveOnlyFigure: ["@", "f:", "figure:"], // figure only, no caption
     directiveUnwrap: ["&", "u:", "unwrap:"], // extract from paragraph
     directiveInline: ["~", "i:", "inline:"], // stay inline
   };
