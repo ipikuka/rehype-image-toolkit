@@ -83,7 +83,6 @@ async function main() {
 
 Now, running `node example.js` you will see.
 
-TODO:
 ```html
 <p>It ensures adding videos/audio using image syntax.</p>
 <video>
@@ -100,6 +99,8 @@ TODO:
   <img src="image.png" alt="Image Caption" />
   <figcaption>Image Caption</figcaption>
 </figure>
+<p>It unwraps images from paragraph</p>
+<img src="image.png" alt="alt" />
 <p>It adds attributes.</p>
 <video title="title" width="640" height="480" autoplay>
   <source src="video.mp4" type="video/mp4" />
@@ -109,18 +110,11 @@ TODO:
 Without `rehype-image-hack` the output would be:
 
 ```html
-<p>
-  It ensures adding videos/audio using image syntax. <img src="video.mp4" alt="" />
-</p>
-<p>
-  It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt" />
-</p>
-<p>
-  It wraps with figure and adds caption. <img src="image.png" alt="^Image Caption" />
-</p>
-<p>
-  It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay" />
-</p>
+<p>It ensures adding videos/audio using image syntax. <img src="video.mp4" alt=""></p>
+<p>It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt"></p>
+<p>It adds figure and caption. <img src="image.png" alt="^Image Caption"></p>
+<p>It unwraps images from paragraph <img src="image.png" alt="&#x26;alt"></p>
+<p>It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay"></p>
 ```
 
 ## Usage with html source
@@ -128,19 +122,27 @@ Without `rehype-image-hack` the output would be:
 Actually, you don't need to use **`rehype-image-hack`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
 
 Say `example.html` looks as follows:
-// TODO
+
 ```html
 <p>
   It adds autolink to original.
   <img src="[https://example.com/image.png]" alt="alt"/>
 </p>
 <p>
-  It wraps with figure and adds caption.
+  It adds figure and caption.
   <img src="image.png" alt="^Image Caption"/>
 </p>
 <p>
   It adds attributes.
   <img src="image.png" title="title > 60x60"/>
+</p>
+<p>
+  It unwraps videos/audio from paragraph by default.
+  <video src="video.mp4"></video>
+</p>
+<p>
+  It keeps videos/audio in paragraph via alt directive.
+  <video src="video.mp4" alt="~"></video>
 </p>
 ```
 
@@ -168,7 +170,6 @@ async function main() {
 
 Now, running `node example.js` you will see.
 
-// TODO
 ```html
 <p>
   It adds autolink to original.
@@ -177,7 +178,7 @@ Now, running `node example.js` you will see.
   </a>
 </p>
 <p>
-  It wraps with figure and adds caption.
+  It adds figure and caption.
 </p>
 <figure>
   <img src="image.png" alt="Image Caption">
@@ -186,6 +187,14 @@ Now, running `node example.js` you will see.
 <p>
   It adds attributes.
   <img src="image.png" title="title" width="60" height="60">
+</p>
+<p>
+  It unwraps videos/audio from paragraph by default.
+</p>
+<video src="video.mp4"></video>
+<p>
+  It keeps videos/audio in paragraph via alt directive.
+  <video src="video.mp4"></video>
 </p>
 ```
 
@@ -353,12 +362,12 @@ will produce the html output:
 </figure>
 ```
 
-Add a **at sign `@`** special directive at the start of the **alt** attribute in order to only wrap the asset with `<figure>` element but NOT to include a caption.
+Add a **double caret `^^`** special directive at the start of the **alt** attribute in order to only wrap the asset with `<figure>` element but NOT to include a caption.
 
 ```markdown
-![@alt](image.png "title")
+![^^alt](image.png "title")
 
-![@](video.mp4 "title")
+![^^](video.mp4 "title")
 ```
 
 will produce the html output *(notice there is no caption)*:
@@ -374,7 +383,7 @@ will produce the html output *(notice there is no caption)*:
 </figure>
 ```
 
-If you want just a regular inline image, do not use any **`^`** or **`@`** directives in the begining of **alt** attribute.
+If you want just a regular inline image, do not use any **`^`** directive in the begining of **alt** attribute.
 
 ```markdown
 ![This image won't be within a figure element](image.png)
