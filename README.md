@@ -16,9 +16,9 @@ Markdown natively supports images but lacks built-in syntax for videos and audio
 
 ## When should I use this?
 
-From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph. In some cases, I need more control—certain images should be excluded from these transformations.
+**From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility.** For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph. **In some cases, I need more control—certain images should be excluded from these transformations.**
 
-That's why I ensured each feature could be controlled individually through directives. **This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
+**That's why I ensured each feature could be controlled individually through directives. This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
 
 **`rehype-image-hack`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
@@ -43,7 +43,8 @@ yarn add rehype-image-hack
 
 ## Usage with markdown source
 
-Say we have the following markdown file, `example.md`:
+Say we have the following markdown file, `example.md`:\
+*pay attention to directives*
 
 ```markdown
 It ensures adding videos/audio using image syntax. ![](video.mp4) 
@@ -121,7 +122,8 @@ Without `rehype-image-hack` the output would be:
 
 Actually, you don't need to use **`rehype-image-hack`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
 
-Say `example.html` looks as follows:
+Say `example.html` looks as follows:\
+*pay attention to directives*
 
 ```html
 <p>
@@ -141,7 +143,7 @@ Say `example.html` looks as follows:
   <video src="video.mp4"></video>
 </p>
 <p>
-  It keeps videos/audio in paragraph via alt directive.
+  It keeps videos/audio in paragraph via tilda directive.
   <video src="video.mp4" alt="~"></video>
 </p>
 ```
@@ -193,7 +195,7 @@ Now, running `node example.js` you will see.
 </p>
 <video src="video.mp4"></video>
 <p>
-  It keeps videos/audio in paragraph via alt directive.
+  It keeps videos/audio in paragraph via tilda directive.
   <video src="video.mp4"></video>
 </p>
 ```
@@ -220,7 +222,7 @@ Markdown lacks built-in support for video and audio, only providing image syntax
 </audio>
 ```
 
-Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~-~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
+Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
 
 ### Use the `title` attribute to customize images, videos, and audio
 
@@ -389,7 +391,7 @@ If you want just a regular inline image, do not use any **`^`** directive in the
 ![This image won't be within a figure element](image.png)
 ```
 
-### Unwrap images from parapraph or Keep inline videos/audio in parapraph
+### Unwrap images from paragraph
 
 Add a **ampersand `&`** special directive at the start of the **alt** attribute in order to unwrap the image from paragraph. Sometime you may want to unwrap images without adding it in a `<figure>`. This directive ensures the image is extracted without adding it in a figure.
 
@@ -399,7 +401,9 @@ Add a **ampersand `&`** special directive at the start of the **alt** attribute 
 ![&alt](image.png)
 ```
 
-Add a **tilda `~`** special directive at the start of the **alt** attribute in order to to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-hack`** unwraps videos/audio from paragraph by default.
+### Keep inline videos/audio in paragraph
+
+Add a **tilda `~`** special directive at the start of the **alt** attribute in order to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-hack`** unwraps videos/audio from paragraph by default.
 
 ```markdown
 Here is the cat voice ![~](cat.mp3). So nice !
@@ -407,7 +411,7 @@ Here is the cat voice ![~](cat.mp3). So nice !
 
 ## Summary table of directives
 
-*to be created soon.*
+*to be created (a PR is welcome).*
 
 ## Options
 
