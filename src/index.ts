@@ -179,9 +179,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     return node.type === "element" && node.tagName === "a";
   }
 
-  function isParagraphElement(
-    node: Root | Doctype | ElementContent | RootContent,
-  ): node is Element {
+  function isParagraphElement(node: RootContent | ElementContent): node is Element {
     return node.type === "element" && node.tagName === "p";
   }
 
@@ -202,9 +200,15 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   }
 
   function isParagraphMdxJsxFlowElement(
-    node: Root | RootContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+    node: RootContent | ElementContent,
   ): node is MdxJsxFlowElementHast {
     return node?.type === "mdxJsxFlowElement" && node.name === "p";
+  }
+
+  function isParagraph(
+    node: RootContent | ElementContent,
+  ): node is Element | MdxJsxFlowElementHast {
+    return isParagraphElement(node) || isParagraphMdxJsxFlowElement(node);
   }
 
   // TODO: support svg
@@ -477,48 +481,53 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       /* v8 ignore next */
       if (!parent || index === undefined) return;
 
-      if (!isParagraphElement(node) && !isParagraphMdxJsxFlowElement(node)) return;
+      /* v8 ignore next */
+      if (node.type === "root" || node.type === "doctype") return;
+
+      if (!isParagraph(node)) return;
 
       const newNodes: RootContent[] = [];
       let currentParagraph: Element | MdxJsxFlowElementHast = createEmptyParagraph();
 
-      for (const element of node.children) {
-        if (isRelevantElement(element) || isRelevantMdxJsxElement(element)) {
+      for (const child of node.children) {
+        if (isRelevantElement(child) || isRelevantMdxJsxElement(child)) {
           flushParagraph();
-          newNodes.push(element);
+          newNodes.push(child);
         } else {
-          currentParagraph.children.push(element);
+          currentParagraph.children.push(child);
         }
       }
 
       flushParagraph();
 
+      function isEffectivelyEmptyParagraph(n: RootContent): boolean {
+        return isParagraph(n) && n.children.every(whitespace);
+      }
+
       // filter empty paragraphs
-      const filtered = newNodes.filter((n) => {
-        return !(
-          (isParagraphElement(n) || isParagraphMdxJsxFlowElement(n)) &&
-          n.children.every(whitespace)
-        );
-      });
+      const filtered = newNodes.filter((n) => !isEffectivelyEmptyParagraph(n));
 
       // trim the text on edges
       filtered.forEach((n) => {
-        (isParagraphElement(n) || isParagraphMdxJsxFlowElement(n)) && trimParagraphEdges(n);
+        if (isParagraph(n)) trimParagraphEdges(n);
       });
+
+      function insertBetween(arr: RootContent[], seperator: Text): RootContent[] {
+        return arr.flatMap((item, index) =>
+          index < arr.length - 1 ? [item, seperator] : [item],
+        );
+      }
 
       // insert new line between each nodes
       const inserted = insertBetween(filtered, { type: "text", value: "\n" });
 
       parent.children.splice(index, 1, ...inserted);
 
-      function insertBetween(arr: RootContent[], element: Text): RootContent[] {
-        return arr.flatMap((item, index) =>
-          index < arr.length - 1 ? [item, element] : [item],
-        );
-      }
-
       function flushParagraph() {
-        newNodes.push(currentParagraph);
+        if (currentParagraph.children.length > 0) {
+          newNodes.push(currentParagraph);
+        }
+
         currentParagraph = createEmptyParagraph();
       }
 
@@ -545,83 +554,92 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         const last = paragraph.children[paragraph.children.length - 1];
 
         if (first?.type === "text") {
-          first.value = first.value.replace(/^[ ]+/, "");
+          first.value = first.value.replace(/^[ ]+/, ""); // not trimend();
         }
 
         if (last?.type === "text") {
-          last.value = last.value.replace(/[ ]+$/, "");
+          last.value = last.value.replace(/[ ]+$/, ""); // not trimStart();
         }
+      }
+
+      function isRelevantElement(element: ElementContent): boolean {
+        if (checkInternallyRelevantElement(element)) {
+          return true;
+        }
+
+        if (isAnchorElement(element)) {
+          return element.children.some(checkInternallyRelevantElement);
+        }
+
+        return false;
       }
 
       function checkInternallyRelevantElement(element: ElementContent): boolean {
         if (element.type !== "element") return false;
 
+        function isMarked(el: Element): boolean {
+          return (
+            !el.properties.directiveInline &&
+            (el.properties.directiveUnwrap ||
+              el.properties.directiveFigure ||
+              Boolean(el.properties.directiveConversion))
+          );
+        }
+
+        const isRelevantImage = element.tagName === "img" && isMarked(element);
         const isVideo = element.tagName === "video" && !element.properties.directiveInline;
         const isAudio = element.tagName === "audio" && !element.properties.directiveInline;
         const isFigure = element.tagName === "figure";
 
-        const isRelevantImage = element.tagName === "img" && isMarkedElement(element);
-
-        element.properties.directiveUnwrap = undefined;
-        element.properties.directiveInline = undefined;
-
-        return isVideo || isAudio || isFigure || isRelevantImage;
-      }
-
-      function isRelevantElement(element: ElementContent): boolean {
-        const isRelevant = checkInternallyRelevantElement(element);
-        const isRelevantAnchor =
-          isAnchorElement(element) && element.children.some(checkInternallyRelevantElement);
-
-        return isRelevant || isRelevantAnchor;
-      }
-
-      function isMarkedElement(el: ElementContent | undefined | null): boolean {
-        /* v8 ignore next */
-        if (!el || !("properties" in el)) return false;
-        return (
-          !el.properties.directiveInline &&
-          (el.properties.directiveUnwrap ||
-            el.properties.directiveFigure ||
-            Boolean(el.properties.directiveConversion))
-        );
-      }
-
-      function checkInternallyRelevantMdxJsxElement(element: ElementContent): boolean {
-        if (!isMdxJsxElement(element)) return false;
-
-        const isVideo = element.name === "video" && !element.data?.directiveInline;
-        const isAudio = element.name === "audio" && !element.data?.directiveInline;
-        const isFigure = element.name === "figure";
-
-        const isRelevantImage = element.name === "img" && isMarkedMdxJsxElement(element);
-
-        if (element.data) {
-          element.data.directiveUnwrap = undefined;
-          element.data.directiveInline = undefined;
+        function cleanDirectives(el: Element) {
+          delete el.properties.directiveUnwrap;
+          delete el.properties.directiveInline;
         }
+
+        cleanDirectives(element);
 
         return isVideo || isAudio || isFigure || isRelevantImage;
       }
 
       function isRelevantMdxJsxElement(element: ElementContent): boolean {
-        const isRelevant = checkInternallyRelevantMdxJsxElement(element);
-        const isRelevantAnchor =
-          isAnchorMdxJsxElement(element) &&
-          element.children.some(checkInternallyRelevantMdxJsxElement);
+        if (checkInternallyRelevantMdxJsxElement(element)) {
+          return true;
+        }
 
-        return isRelevant || isRelevantAnchor;
+        if (isAnchorMdxJsxElement(element)) {
+          return element.children.some(checkInternallyRelevantMdxJsxElement);
+        }
+
+        return false;
       }
 
-      function isMarkedMdxJsxElement(el: ElementContent | undefined | null): boolean {
-        /* v8 ignore next */
-        if (!el || !("attributes" in el)) return false;
-        return (
-          !el.data?.directiveInline &&
-          (el.data?.directiveUnwrap ||
-            el.data?.directiveFigure ||
-            Boolean(el.data?.directiveConversion))
-        );
+      function checkInternallyRelevantMdxJsxElement(element: ElementContent): boolean {
+        if (!isMdxJsxElement(element)) return false;
+
+        function isMarked(el: MdxJsxTextElementHast | MdxJsxFlowElementHast): boolean {
+          return (
+            !el.data?.directiveInline &&
+            (el.data?.directiveUnwrap ||
+              el.data?.directiveFigure ||
+              Boolean(el.data?.directiveConversion))
+          );
+        }
+
+        const isRelevantImage = element.name === "img" && isMarked(element);
+        const isVideo = element.name === "video" && !element.data?.directiveInline;
+        const isAudio = element.name === "audio" && !element.data?.directiveInline;
+        const isFigure = element.name === "figure";
+
+        function cleanDirectives(el: MdxJsxTextElementHast | MdxJsxFlowElementHast) {
+          if (el.data) {
+            delete el.data.directiveUnwrap;
+            delete el.data.directiveInline;
+          }
+        }
+
+        cleanDirectives(element);
+
+        return isVideo || isAudio || isFigure || isRelevantImage;
       }
     });
 
