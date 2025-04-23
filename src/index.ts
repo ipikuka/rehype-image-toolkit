@@ -389,7 +389,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         // Preparation part for adding autolink ***************************************
 
         const srcAttribute = getMdxJsxAttribute(node.attributes, "src");
-        let monitoredSrc;
+        let monitoredSrc: string | undefined;
 
         if (srcAttribute) {
           const [srcType, srcValue] = getMdxJsxAttributeValue(srcAttribute);
