@@ -53,30 +53,90 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle extraction images or not to extraction videos/audio from paragraph", async () => {
+  it("handle unwrap images or keep inline videos/audio in paragraph", async () => {
     const input = dedent`
-      ![](image.png)
-
       ![&](image.png)
-
-      ![](video.mp4)
+      
+      ![&]([image.png])
+      
+      ![&]((image.png))
 
       ![~](video.mp4)
-
-      ![](audio.mp3)
-
+      
       ![~](audio.mp3)
     `;
 
     const html = await processMdx(input, "mdx");
 
     expect(html).toMatchInlineSnapshot(`
-      "<p><img src="image.png" alt=""/></p>
-      <img src="image.png" alt=""/>
-      <video><source src="video.mp4" type="video/mp4"/></video>
+      "<img src="image.png" alt=""/>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
       <p><video><source src="video.mp4" type="video/mp4"/></video></p>
-      <audio><source src="audio.mp3" type="audio/mpeg"/></audio>
       <p><audio><source src="audio.mp3" type="audio/mpeg"/></audio></p>"
+    `);
+  });
+
+  // ******************************************
+  it("handle unwrap <img> or keep inline <video>, <audio> in paragraph", async () => {
+    const input = dedent`
+      <p><img src="image.png" alt="&"/></p>
+      <p><img src="[image.png]" alt="&"/></p>
+      <p><img src="(image.png)" alt="&"/></p>
+
+      <p><img src="vide.mp4" alt="~"/></p>
+      <p><img src="audio.mp3" alt="~"/></p>
+      <p><a href="#"><img src="vide.mp4" alt="~"/></a></p>
+      <p><a href="#"><img src="audio.mp3" alt="~"/></a></p>
+
+      <p><video src="vide.mp4" alt="~"/></p>
+      <p><audio src="audio.mp3" alt="~"/></p>
+      <p><a href="#"><video src="vide.mp4" alt="~"/></a></p>
+      <p><a href="#"><audio src="audio.mp3" alt="~"/></a></p>
+    `;
+
+    const html = await processMdx(input, "mdx");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img src="image.png" alt=""/>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
+      <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
+      <p><video><source src="vide.mp4" type="video/mp4"/></video></p>
+      <p><audio><source src="audio.mp3" type="audio/mpeg"/></audio></p>
+      <p><a href="#"><video><source src="vide.mp4" type="video/mp4"/></video></a></p>
+      <p><a href="#"><audio><source src="audio.mp3" type="audio/mpeg"/></audio></a></p>
+      <p><video src="vide.mp4"></video></p>
+      <p><audio src="audio.mp3"></audio></p>
+      <p><a href="#"><video src="vide.mp4"></video></a></p>
+      <p><a href="#"><audio src="audio.mp3"></audio></a></p>"
+    `);
+  });
+
+  // ******************************************
+  it("check the behavior of conversion and default extraction without any other directives ", async () => {
+    const input = dedent`
+      <p><img src="video.mp4"/></p>
+      <p><img src="audio.mp3"/></p>
+      <p><a href="#"><img src="video.mp4"/></a></p>
+      <p><a href="#"><img src="audio.mp3"/></a></p>
+
+      <p><video src="video.mp4"/></p>
+      <p><audio src="audio.mp3"/></p>
+      <p><a href="#"><video src="video.mp4"/></a></p>
+      <p><a href="#"><audio src="audio.mp3"/></a></p>
+    `;
+
+    const html = await processMdx(input, "mdx");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<video><source src="video.mp4" type="video/mp4"/></video>
+      <audio><source src="audio.mp3" type="audio/mpeg"/></audio>
+      <a href="#"><video><source src="video.mp4" type="video/mp4"/></video></a>
+      <a href="#"><audio><source src="audio.mp3" type="audio/mpeg"/></audio></a>
+      <video src="video.mp4"></video>
+      <audio src="audio.mp3"></audio>
+      <a href="#"><video src="video.mp4"></video></a>
+      <a href="#"><audio src="audio.mp3"></audio></a>"
     `);
   });
 
