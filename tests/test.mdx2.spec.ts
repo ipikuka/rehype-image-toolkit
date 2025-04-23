@@ -193,13 +193,13 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, autolinks && does NOT add figure due to be in a figure already", async () => {
     const input = dedent`
-      <figure><img src="image.png" alt="@Caption"/></figure>
+      <figure><img src="image.png" alt="^^Caption"/></figure>
       <figure><img src="image.png" alt="^Caption"/></figure>
 
-      <figure><img src="[image.png]" alt="@Caption"/></figure>
+      <figure><img src="[image.png]" alt="^^Caption"/></figure>
       <figure><img src="[image.png]" alt="^Caption"/></figure>
       
-      <figure><img src="(image.png)" alt="@Caption"/></figure>
+      <figure><img src="(image.png)" alt="^^Caption"/></figure>
       <figure><img src="(image.png)" alt="^Caption"/></figure>
     `;
 
@@ -219,13 +219,13 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, autolinks && does NOT add figure due to be in a figure already, figcaption is above", async () => {
     const input = dedent`
-      <figure><img src="image.png" alt="@Caption"/></figure>
+      <figure><img src="image.png" alt="^^Caption"/></figure>
       <figure><img src="image.png" alt="^Caption"/></figure>
 
-      <figure><img src="[image.png]" alt="@Caption"/></figure>
+      <figure><img src="[image.png]" alt="^^Caption"/></figure>
       <figure><img src="[image.png]" alt="^Caption"/></figure>
       
-      <figure><img src="(image.png)" alt="@Caption"/></figure>
+      <figure><img src="(image.png)" alt="^^Caption"/></figure>
       <figure><img src="(image.png)" alt="^Caption"/></figure>
     `;
 
@@ -250,17 +250,17 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for images", async () => {
     const input = dedent`
-      ![@Hello](image.png)
+      ![^^Hello](image.png)
 
       ![^Hello](image.png)
 
-      ![c:Hello](image.png)
+      ![figcap:Hello](image.png)
 
-      <img src="image.png" alt="@Hello"/>
+      <img src="image.png" alt="^^Hello"/>
 
       <img src="image.png" alt="^Hello"/>
 
-      <img src="image.png" alt="c:Hello"/>
+      <img src="image.png" alt="figcap:Hello"/>
     `;
 
     const output = `
@@ -279,23 +279,23 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for videos and images to be converted into videos", async () => {
     const input = dedent`
-      ![@Hello](video.mp4)
+      ![^^Hello](video.mp4)
 
       ![^Hello](video.mp4)
 
-      ![c:Hello](video.mp4)
+      ![figcap:Hello](video.mp4)
 
-      <img src="video.mp4" alt="@Hello"/>
+      <img src="video.mp4" alt="^^Hello"/>
 
       <img src="video.mp4" alt="^Hello"/>
 
-      <img src="video.mp4" alt="c:Hello"/>
+      <img src="video.mp4" alt="figcap:Hello"/>
 
-      <video src="video.mp4" alt="@Hello"></video>
+      <video src="video.mp4" alt="^^Hello"></video>
 
       <video src="video.mp4" alt="^Hello"></video>
 
-      <video src="video.mp4" alt="c:Hello"></video>
+      <video src="video.mp4" alt="figcap:Hello"></video>
     `;
 
     const output = `
@@ -317,23 +317,23 @@ describe("reyhpe-image-hack, with MDX sources", () => {
   // ******************************************
   it("MDX source, handle caption for audio and images to be converted into audio", async () => {
     const input = dedent`
-      ![@Hello](audio.mp3)
+      ![^^Hello](audio.mp3)
 
       ![^Hello](audio.mp3)
 
-      ![c:Hello](audio.mp3)
+      ![figcap:Hello](audio.mp3)
 
-      <img src="audio.mp3" alt="@Hello"/>
+      <img src="audio.mp3" alt="^^Hello"/>
 
       <img src="audio.mp3" alt="^Hello"/>
 
-      <img src="audio.mp3" alt="c:Hello"/>
+      <img src="audio.mp3" alt="figcap:Hello"/>
 
-      <audio src="audio.mp3" alt="@Hello"></audio>
+      <audio src="audio.mp3" alt="^^Hello"></audio>
 
       <audio src="audio.mp3" alt="^Hello"></audio>
 
-      <audio src="audio.mp3" alt="c:Hello"></audio>
+      <audio src="audio.mp3" alt="figcap:Hello"></audio>
     `;
 
     const output = `
@@ -439,26 +439,26 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     const input = dedent`
       <img src={"image.png"}/>
       <img src={"image.png"} alt={""}/>
-      <img src={"image.png"} alt={"@Caption"}/>
+      <img src={"image.png"} alt={"^^Alt"}/>
       <img src={"image.png"} alt={"^Caption"}/>
       <img src={"(image.png)"} alt={""}/>
-      <img src={"(image.png)"} alt={"@Caption"}/>
+      <img src={"(image.png)"} alt={"^^Alt"}/>
       <img src={"(image.png)"} alt={"^Caption"}/>
       <img src={"[image.png]"} alt={""}/>
-      <img src={"[image.png]"} alt={"@Caption"}/>
+      <img src={"[image.png]"} alt={"^^Alt"}/>
       <img src={"[image.png]"} alt={"^Caption"}/>
     `;
 
     expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
       "<img src="image.png"/>
       <img src="image.png" alt=""/>
-      <figure><img src="image.png" alt="Caption"/></figure>
+      <figure><img src="image.png" alt="Alt"/></figure>
       <figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
-      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a></figure>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="Alt"/></a></figure>
       <figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure>
       <a href="image.png" target="_blank"><img src="image.png" alt=""/></a>
-      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/></figure></a>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="Alt"/></figure></a>
       <a href="image.png" target="_blank"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a>"
     `);
   });

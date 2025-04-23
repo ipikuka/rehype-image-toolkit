@@ -144,13 +144,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for images", async () => {
     const input = dedent`
-      ![@Hello](image.png)
+      ![^^Hello](image.png)
 
-      ![f:Hello](image.png)
+      ![figure:Hello](image.png)
 
       ![^Hello](image.png)
 
-      ![c:Hello](image.png)
+      ![figcap:Hello](image.png)
     `;
 
     const html = String(await processMd(input));
@@ -180,11 +180,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption above for images", async () => {
     const input = dedent`
-      ![@Hello](image.png)
+      ![^^Hello](image.png)
 
       ![^Hello](image.png)
 
-      ![c:Hello](image.png)
+      ![figcap:Hello](image.png)
     `;
 
     const html = String(await processMd(input, { figureCaptionPosition: "above" }));
@@ -212,11 +212,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for videos", async () => {
     const input = dedent`
-      ![@Hello](video.mp4)
+      ![^^Hello](video.mp4)
 
       ![^Hello](video.mp4)
 
-      ![c:Hello](video.mp4)
+      ![figcap:Hello](video.mp4)
     `;
 
     const html = String(await processMd(input));
@@ -246,11 +246,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding caption for audio", async () => {
     const input = dedent`
-      ![@Hello](audio.mp3)
+      ![^^Hello](audio.mp3)
 
       ![^Hello](audio.mp3)
 
-      ![c:Hello](audio.mp3)
+      ![figcap:Hello](audio.mp3)
     `;
 
     const html = String(await processMd(input));
@@ -546,11 +546,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle adding figure with no caption, in html <img>, <video>, and <audio>", async () => {
     const input = dedent`
-      <img alt="@" src="image.png">
+      <img alt="^^" src="image.png">
 
-      <video alt="@" src="video.mp4"></video>
+      <video alt="^^" src="video.mp4"></video>
 
-      <audio alt="@" src="audio.mp3"></audio>
+      <audio alt="^^" src="audio.mp3"></audio>
     `;
 
     const html = String(await processMdRawFirst(input));
@@ -907,11 +907,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle transformation to videos/audio; and handle adding figure already wrapped with a link ", async () => {
     const input = dedent`
-      [![@](image.png)](https://example.com)
+      [![^^](image.png)](https://example.com)
 
-      [![@](video.mp4)](https://example.com)
+      [![^^](video.mp4)](https://example.com)
 
-      [![@](audio.mp3)](https://example.com)
+      [![^^](audio.mp3)](https://example.com)
     `;
 
     const html = String(await processMd(input));
@@ -943,7 +943,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
       ![]([image.png]) 
       
-      ![@alt]([image.png])
+      ![^^alt]([image.png])
 
       ![^caption]([image.png])
     `;
@@ -978,7 +978,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     const input = dedent`
       ![]((image.png)) 
       
-      ![@alt]((image.png))
+      ![^^alt]((image.png))
 
       ![^caption]((image.png))
     `;
@@ -1029,7 +1029,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink which is already wrapped with a link, in the middle", async () => {
     const input = dedent`
-      Hi [![@alt]([image.png])](https://example.com) text
+      Hi [![^^alt]([image.png])](https://example.com) text
 
       Hi [![^alt]([image.png])](https://example.com) text
     `;
@@ -1066,13 +1066,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink, but add caption; which is already wrapped with a link", async () => {
     const input = dedent`
-      [![@alt]([image.png])](https://example.com)
+      [![^^alt]([image.png])](https://example.com)
 
-      [![f:alt]([image.png])](https://example.com)
+      [![figure:alt]([image.png])](https://example.com)
 
       [![^alt]([image.png])](https://example.com)
 
-      [![c:alt]([image.png])](https://example.com)
+      [![figcap:alt]([image.png])](https://example.com)
     `;
 
     const html = String(await processMd(input));
@@ -1114,9 +1114,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
       ![]([audio.mp3])
 
-      ![@]((video.mp4))
+      ![^^]((video.mp4))
 
-      ![@]((audio.mp3))
+      ![^^]((audio.mp3))
     `;
 
     const html = String(await processMd(input));
@@ -1144,11 +1144,11 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("does NOT add autolink for images/videos/audio in an anchor link, just remove brackets from the source", async () => {
     const input = dedent`
-      [![@]([video.mp4])](www.example.com)
+      [![^^]([video.mp4])](www.example.com)
 
-      [![@]([audio.mp3])](www.example.com)
+      [![^^]([audio.mp3])](www.example.com)
 
-      [![@]([image.png]) ![@]([video.mp4]) ![@]([video.mp3])](www.example.com)
+      [![^^]([image.png]) ![^^]([video.mp4]) ![^^]([video.mp3])](www.example.com)
 
       [![]([image.png]) ![]([video.mp4]) ![]([video.mp3])](www.example.com)
     `;
@@ -1216,31 +1216,35 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("example in the README", async () => {
     const input = dedent`
-    It converts images to audio/videos. ![](video.mp4)
+      It ensures adding videos/audio using image syntax. ![](video.mp4) 
 
-    It adds autolink. ![alt]([https://example.com/image.png])
+      It adds autolink to original. ![alt]([https://example.com/image.png])
 
-    It adds caption. ![^Image Caption](image.png)
+      It adds figure and caption. ![^Image Caption](image.png)
 
-    It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
+      It unwraps images from paragraph ![&alt](image.png)
+
+      It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
   `;
 
     const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
-      "<p>It converts images to audio/videos.</p>
+      "<p>It ensures adding videos/audio using image syntax.</p>
       <video><source src="video.mp4" type="video/mp4" /></video>
       <p>
-        It adds autolink.
+        It adds autolink to original.
         <a href="https://example.com/image.png" target="_blank"
           ><img src="https://example.com/image.png" alt="alt"
         /></a>
       </p>
-      <p>It adds caption.</p>
+      <p>It adds figure and caption.</p>
       <figure>
         <img src="image.png" alt="Image Caption" />
         <figcaption>Image Caption</figcaption>
       </figure>
+      <p>It unwraps images from paragraph</p>
+      <img src="image.png" alt="alt" />
       <p>It adds attributes.</p>
       <video title="title" width="640" height="480" autoplay>
         <source src="video.mp4" type="video/mp4" />
@@ -1249,11 +1253,13 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
 
     expect(html).toMatchInlineSnapshot(`
-      "<p>It converts images to audio/videos.</p>
+      "<p>It ensures adding videos/audio using image syntax.</p>
       <video><source src="video.mp4" type="video/mp4"></video>
-      <p>It adds autolink. <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a></p>
-      <p>It adds caption.</p>
+      <p>It adds autolink to original. <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a></p>
+      <p>It adds figure and caption.</p>
       <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
+      <p>It unwraps images from paragraph</p>
+      <img src="image.png" alt="alt">
       <p>It adds attributes.</p>
       <video title="title" width="640" height="480" autoplay><source src="video.mp4" type="video/mp4"></video>"
     `);
