@@ -125,14 +125,14 @@ describe("reyhpe-image-hack from markdown source, no rehype-raw", () => {
   // ******************************************
   it("handle basic paragraph that consists of image syntaxes", async () => {
     const input = dedent`
-      See the figure below. ![^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      See the figure below. ![^^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
       You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
     `;
 
     const html = String(await utils.processMd(input));
 
     expect(html).toMatchInlineSnapshot(`
-      "<p>See the figure below. <img src="image.png" alt="^Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
+      "<p>See the figure below. <img src="image.png" alt="^^Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
       You see the video and sound below. <img src="video.mp4" alt=""><img src="audio.mp3" alt=""> Both video and audio tell the truth.</p>"
     `);
   });
@@ -311,15 +311,67 @@ describe("reyhpe-image-hack from markdown source, with rehype-raw", () => {
   // ******************************************
   it("handle basic paragraph that consists of image syntaxes", async () => {
     const input = dedent`
-      See the figure below. ![^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
+      See the figure below. ![^^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 
       You see the video and sound below. ![](video.mp4)![](audio.mp3) Both video and audio tell the truth.
     `;
 
     const html = String(await utils.processMdRaw(input));
 
     expect(html).toMatchInlineSnapshot(`
-      "<p>See the figure below. <img src="image.png" alt="^Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
+      "<p>See the figure below. <img src="image.png" alt="^^Caption"> Here is the small icons <img src="image1.png" alt=""> <img src="image2.png" alt="">
       You see the video and sound below. <img src="video.mp4" alt=""><img src="audio.mp3" alt=""> Both video and audio tell the truth.</p>"
+    `);
+  });
+
+  // ******************************************
+  it("example in the README.md, without plugin", async () => {
+    const input = dedent`
+      It ensures adding videos/audio using image syntax. ![](video.mp4) 
+
+      It adds autolink to original. ![alt]([https://example.com/image.png])
+
+      It adds figure and caption. ![^Image Caption](image.png)
+
+      It unwraps images from paragraph ![&alt](image.png)
+
+      It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
+    `;
+
+    const html = String(await utils.processMd(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>It ensures adding videos/audio using image syntax. <img src="video.mp4" alt=""></p>
+      <p>It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt"></p>
+      <p>It adds figure and caption. <img src="image.png" alt="^Image Caption"></p>
+      <p>It unwraps images from paragraph <img src="image.png" alt="&#x26;alt"></p>
+      <p>It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay"></p>"
+    `);
+  });
+});
+
+describe("reyhpe-image-hack, example in the README", () => {
+  // ******************************************
+  it("example in the README, without plugin", async () => {
+    const input = dedent`
+      It ensures adding videos/audio using image syntax. ![](video.mp4) 
+
+      It adds autolink to original. ![alt]([https://example.com/image.png])
+
+      It adds figure and caption. ![^Image Caption](image.png)
+
+      It unwraps images from paragraph ![&alt](image.png)
+
+      It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
+    `;
+
+    const html = String(await utils.processMd(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>It ensures adding videos/audio using image syntax. <img src="video.mp4" alt=""></p>
+      <p>It adds autolink to original. <img src="%5Bhttps://example.com/image.png%5D" alt="alt"></p>
+      <p>It adds figure and caption. <img src="image.png" alt="^Image Caption"></p>
+      <p>It unwraps images from paragraph <img src="image.png" alt="&#x26;alt"></p>
+      <p>It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay"></p>"
     `);
   });
 });

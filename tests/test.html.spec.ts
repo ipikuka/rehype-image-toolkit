@@ -26,7 +26,7 @@ describe("reyhpe-image-hack, with html sources", () => {
   it("process html input, handle figure and caption", async () => {
     const input = dedent`
       <img src="image.png" alt="^Image Caption">
-      <img src="image.png" alt="@Image Alt">
+      <img src="image.png" alt="^^Image Alt">
     `;
 
     const html = String(await processHtml(input));
@@ -44,7 +44,7 @@ describe("reyhpe-image-hack, with html sources", () => {
   // *************************************
   it("process html input, handle figure and caption in paragraph", async () => {
     const input = dedent`
-      <p><img src="image.png" alt="^Image Caption"><img src="image.png" alt="@Image Alt"></p>
+      <p><img src="image.png" alt="^Image Caption"><img src="image.png" alt="^^Image Alt"></p>
     `;
 
     const html = String(await processHtml(input));
@@ -66,7 +66,7 @@ describe("reyhpe-image-hack, with html sources", () => {
       <p>
         <img src="image.png" alt="^Image Caption">
       </p>
-      <img src="image.png" alt="@Image Alt">
+      <img src="image.png" alt="^^Image Alt">
     `;
 
     const html = String(await processHtml(input));
@@ -103,16 +103,24 @@ describe("reyhpe-image-hack, with html sources", () => {
   it("process html input, example in the README", async () => {
     const input = dedent`
       <p>
-        It adds autolink.
+        It adds autolink to original.
         <img src="[https://example.com/image.png]" alt="alt"/>
       </p>
       <p>
-        It adds caption.
+        It adds figure and caption.
         <img src="image.png" alt="^Image Caption"/>
       </p>
       <p>
         It adds attributes.
         <img src="image.png" title="title > 60x60"/>
+      </p>
+      <p>
+        It unwraps videos/audio from paragraph by default.
+        <video src="video.mp4"></video>
+      </p>
+      <p>
+        It keeps videos/audio in paragraph via alt directive.
+        <video src="video.mp4" alt="~"></video>
       </p>
     `;
 
@@ -120,16 +128,24 @@ describe("reyhpe-image-hack, with html sources", () => {
 
     expect(html).toMatchInlineSnapshot(`
       "<p>
-        It adds autolink.
+        It adds autolink to original.
         <a href="https://example.com/image.png" target="_blank"><img src="https://example.com/image.png" alt="alt"></a>
       </p>
       <p>
-        It adds caption.
+        It adds figure and caption.
       </p>
       <figure><img src="image.png" alt="Image Caption"><figcaption>Image Caption</figcaption></figure>
       <p>
         It adds attributes.
         <img src="image.png" title="title" width="60" height="60">
+      </p>
+      <p>
+        It unwraps videos/audio from paragraph by default.
+      </p>
+      <video src="video.mp4"></video>
+      <p>
+        It keeps videos/audio in paragraph via alt directive.
+        <video src="video.mp4"></video>
       </p>"
     `);
   });
