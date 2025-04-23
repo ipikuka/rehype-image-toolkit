@@ -1,7 +1,7 @@
 import type { Plugin } from "unified";
 
 import type { MdxJsxFlowElementHast, MdxJsxTextElementHast } from "mdast-util-mdx-jsx";
-import type { Element, Root, RootContent, Text, ElementContent } from "hast";
+import type { Element, Root, RootContent, Text, ElementContent, Doctype } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
@@ -174,31 +174,37 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
   }
 
   function isAnchorElement(
-    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | ElementContent,
   ): node is Element {
     return node.type === "element" && node.tagName === "a";
   }
 
-  function isParagraphElement(node: RootContent): node is Element {
+  function isParagraphElement(
+    node: Root | Doctype | ElementContent | RootContent,
+  ): node is Element {
     return node.type === "element" && node.tagName === "p";
   }
 
-  function isMdxJsxElement(
-    node: Root | ElementContent | undefined,
-  ): node is MdxJsxFlowElementHast | MdxJsxTextElementHast {
+  function isMdxJsxElement(node: Root | ElementContent | Doctype | ElementContent) {
     return node?.type === "mdxJsxTextElement" || node?.type === "mdxJsxFlowElement";
   }
 
   function isAnchorMdxJsxElement(
-    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | undefined,
-  ): boolean {
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is MdxJsxTextElementHast | MdxJsxFlowElementHast {
     return isMdxJsxElement(node) && node.name === "a";
   }
 
   function isFigureMdxJsxElement(
-    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | undefined,
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
   ): boolean {
     return isMdxJsxElement(node) && node.name === "figure";
+  }
+
+  function isParagraphMdxJsxFlowElement(
+    node: Root | RootContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is MdxJsxFlowElementHast {
+    return node?.type === "mdxJsxFlowElement" && node.name === "p";
   }
 
   // TODO: support svg
@@ -227,7 +233,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // Preparation part for adding figure and caption; also unwrapping **************
 
-      if (node.properties.alt) {
+      if (typeof node.properties.alt === "string") {
         const alt = node.properties.alt;
         const { directive, value } = parseAltDirective(alt);
 
@@ -460,18 +466,21 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     );
 
     /**
-     * unravelling visit on <p> elements looking Element, MdxJsxFlowElement and MdxJsxTextElement
+     * unravelling visit on <p> Elements or <p> MdxJsxFlowElements
      *
      * unravel images to be converted into videos/audio or to be wrapped with figure in paragraphs
      * unravel also videos/audio wrapped with a paragraph (it may happen while remark/rehype parsing)
      *
      * Mutates `children` of paragraph nodes.
      */
-    visit(tree, "element", function (node, index, parent) {
-      if (!parent || index === undefined || node.tagName !== "p") return;
+    visit(tree, ["element", "mdxJsxFlowElement"], function (node, index, parent) {
+      /* v8 ignore next */
+      if (!parent || index === undefined) return;
+
+      if (!isParagraphElement(node) && !isParagraphMdxJsxFlowElement(node)) return;
 
       const newNodes: RootContent[] = [];
-      let currentParagraph: Element = createEmptyParagraph();
+      let currentParagraph: Element | MdxJsxFlowElementHast = createEmptyParagraph();
 
       for (const element of node.children) {
         if (isRelevantElement(element) || isRelevantMdxJsxElement(element)) {
@@ -486,12 +495,15 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
       // filter empty paragraphs
       const filtered = newNodes.filter((n) => {
-        return !(isParagraphElement(n) && n.children.every(whitespace));
+        return !(
+          (isParagraphElement(n) || isParagraphMdxJsxFlowElement(n)) &&
+          n.children.every(whitespace)
+        );
       });
 
       // trim the text on edges
       filtered.forEach((n) => {
-        isParagraphElement(n) && trimParagraphEdges(n);
+        (isParagraphElement(n) || isParagraphMdxJsxFlowElement(n)) && trimParagraphEdges(n);
       });
 
       // insert new line between each nodes
@@ -510,7 +522,16 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         currentParagraph = createEmptyParagraph();
       }
 
-      function createEmptyParagraph(): Element {
+      function createEmptyParagraph(): Element | MdxJsxFlowElementHast {
+        if (isMdxJsxElement(node)) {
+          return {
+            type: "mdxJsxFlowElement",
+            name: "p",
+            attributes: [],
+            children: [],
+          };
+        }
+
         return {
           type: "element",
           tagName: "p",
@@ -519,7 +540,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         };
       }
 
-      function trimParagraphEdges(paragraph: Element) {
+      function trimParagraphEdges(paragraph: Element | MdxJsxFlowElementHast) {
         const first = paragraph.children[0];
         const last = paragraph.children[paragraph.children.length - 1];
 
@@ -532,7 +553,7 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
         }
       }
 
-      function isRelevantElement(element: ElementContent) {
+      function checkInternallyRelevantElement(element: ElementContent): boolean {
         if (element.type !== "element") return false;
 
         const isVideo = element.tagName === "video" && !element.properties.directiveInline;
@@ -541,36 +562,32 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         const isRelevantImage = element.tagName === "img" && isMarkedElement(element);
 
-        const isRelevantAnchor =
-          element.tagName === "a" &&
-          element.children.some((child) => {
-            return (
-              child.type === "element" &&
-              ((child.tagName === "img" && isMarkedElement(child)) ||
-                (child.tagName === "video" && !element.properties.directiveInline) ||
-                (child.tagName === "audio" && !element.properties.directiveInline) ||
-                child.tagName === "figure")
-            );
-          });
-
         element.properties.directiveUnwrap = undefined;
         element.properties.directiveInline = undefined;
 
-        return isVideo || isAudio || isFigure || isRelevantImage || isRelevantAnchor;
+        return isVideo || isAudio || isFigure || isRelevantImage;
       }
 
-      function isMarkedElement(el: ElementContent | undefined | null) {
+      function isRelevantElement(element: ElementContent): boolean {
+        const isRelevant = checkInternallyRelevantElement(element);
+        const isRelevantAnchor =
+          isAnchorElement(element) && element.children.some(checkInternallyRelevantElement);
+
+        return isRelevant || isRelevantAnchor;
+      }
+
+      function isMarkedElement(el: ElementContent | undefined | null): boolean {
         /* v8 ignore next */
         if (!el || !("properties" in el)) return false;
         return (
           !el.properties.directiveInline &&
           (el.properties.directiveUnwrap ||
             el.properties.directiveFigure ||
-            el.properties.directiveConversion)
+            Boolean(el.properties.directiveConversion))
         );
       }
 
-      function isRelevantMdxJsxElement(element: ElementContent) {
+      function checkInternallyRelevantMdxJsxElement(element: ElementContent): boolean {
         if (!isMdxJsxElement(element)) return false;
 
         const isVideo = element.name === "video" && !element.data?.directiveInline;
@@ -579,27 +596,31 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
 
         const isRelevantImage = element.name === "img" && isMarkedMdxJsxElement(element);
 
-        const isRelevantAnchor =
-          element.name === "a" &&
-          element.children.some((child) => {
-            return (
-              isMdxJsxElement(child) &&
-              ((child.name === "img" && isMarkedMdxJsxElement(child)) ||
-                (child.name === "video" && !element.data?.directiveInline) ||
-                (child.name === "audio" && !element.data?.directiveInline) ||
-                child.name === "figure")
-            );
-          });
+        if (element.data) {
+          element.data.directiveUnwrap = undefined;
+          element.data.directiveInline = undefined;
+        }
 
-        return isVideo || isAudio || isFigure || isRelevantImage || isRelevantAnchor;
+        return isVideo || isAudio || isFigure || isRelevantImage;
       }
 
-      function isMarkedMdxJsxElement(el: ElementContent | undefined | null) {
+      function isRelevantMdxJsxElement(element: ElementContent): boolean {
+        const isRelevant = checkInternallyRelevantMdxJsxElement(element);
+        const isRelevantAnchor =
+          isAnchorMdxJsxElement(element) &&
+          element.children.some(checkInternallyRelevantMdxJsxElement);
+
+        return isRelevant || isRelevantAnchor;
+      }
+
+      function isMarkedMdxJsxElement(el: ElementContent | undefined | null): boolean {
         /* v8 ignore next */
         if (!el || !("attributes" in el)) return false;
         return (
           !el.data?.directiveInline &&
-          (el.data?.directiveUnwrap || el.data?.directiveFigure || el.data?.directiveConversion)
+          (el.data?.directiveUnwrap ||
+            el.data?.directiveFigure ||
+            Boolean(el.data?.directiveConversion))
         );
       }
     });
