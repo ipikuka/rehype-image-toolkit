@@ -82,6 +82,8 @@ type PartiallyRequiredImageToolkitOptions = Prettify<
   >
 >;
 
+type ElementX = Element | MdxJsxFlowElementHast | MdxJsxTextElementHast;
+
 const htmlToReactAttrMap: Record<string, string> = {
   // Global
   class: "className",
@@ -172,15 +174,8 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     { wrapper: "parenthesis", regex: /\(.*\)/ },
   ] as const;
 
-  function hasOneChildMedia(
-    node: MdxJsxFlowElementHast | MdxJsxTextElementHast | Element,
-  ): boolean {
-    if (node.children.length === 1) {
-      const child = node.children[0];
-      return isImageElement(child) || isVideoElement(child) || isAudioElement(child);
-    }
-
-    return false;
+  function isMediaElement(node: ElementContent): boolean {
+    return isImageElement(node) || isVideoElement(node) || isAudioElement(node);
   }
 
   function isImageElement(
@@ -221,10 +216,22 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     return node?.type === "mdxJsxTextElement" || node?.type === "mdxJsxFlowElement";
   }
 
-  function isImageMdxJsxElement(
-    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
-  ): boolean {
+  function isMediaMdxJsxElement(node: ElementContent): boolean {
+    return (
+      isImageMdxJsxElement(node) || isVideoMdxJsxElement(node) || isAudioMdxJsxElement(node)
+    );
+  }
+
+  function isImageMdxJsxElement(node: ElementContent): boolean {
     return isMdxJsxElement(node) && node.name === "img";
+  }
+
+  function isVideoMdxJsxElement(node: ElementContent): boolean {
+    return isMdxJsxElement(node) && node.name === "video";
+  }
+
+  function isAudioMdxJsxElement(node: ElementContent): boolean {
+    return isMdxJsxElement(node) && node.name === "audio";
   }
 
   function isFigureMdxJsxElement(
@@ -251,11 +258,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     return isParagraphElement(node) || isParagraphMdxJsxFlowElement(node);
   }
 
-  function isTarget(
-    node: ElementContent,
-  ): node is Element | MdxJsxFlowElementHast | MdxJsxTextElementHast {
-    return node.type === "element" || isMdxJsxElement(node);
-  }
+  // function isElementX(node: ElementContent): node is ElementX {
+  //   return node.type === "element" || isMdxJsxElement(node);
+  // }
 
   // TODO: support svg
   // look at https://www.npmjs.com/package/hast-util-properties-to-mdx-jsx-attributes
@@ -536,23 +541,20 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       if (!isParagraph(node)) return;
 
       /********** Check the node if it has a implicit figure **********************/
-
       if (settings.implicitFigure && node.children.length === 1) {
-        let implicitFigureElement:
-          | Element
-          | MdxJsxFlowElementHast
-          | MdxJsxTextElementHast
-          | undefined = undefined;
+        let implicitFigureElement: ElementX | undefined = undefined;
 
         const child = node.children[0];
-        if (hasOneChildMedia(node)) {
-          implicitFigureElement = isTarget(child) ? child : undefined;
+        if (isMediaElement(child) || isMediaMdxJsxElement(child)) {
+          implicitFigureElement = child as ElementX;
         } else if (
-          (isAnchorElement(child) && hasOneChildMedia(child)) ||
-          (isAnchorMdxJsxElement(child) && hasOneChildMedia(child))
+          (isAnchorElement(child) || isAnchorMdxJsxElement(child)) &&
+          child.children.length === 1
         ) {
           const grandChild = child.children[0];
-          implicitFigureElement = isTarget(grandChild) ? grandChild : undefined;
+          if (isMediaElement(grandChild) || isMediaMdxJsxElement(grandChild)) {
+            implicitFigureElement = grandChild as ElementX;
+          }
         }
 
         if (implicitFigureElement) {

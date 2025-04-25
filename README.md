@@ -240,7 +240,7 @@ As you know, Markdown’s image syntax supports an optional **`title`** attribut
 
 **`width` and `hight` attributes must be in pixel unit**
 
-Yo can use `px` or just number for example `320` or `320px`. The CSS units other than pixel will go to the style attribute.
+You can use `px` or just number for example `320` or `320px`. The CSS units other than pixel will go to the style attribute.
 
 ```markdown
 ![](my-image.png "Image Title > width=640 height=480")
