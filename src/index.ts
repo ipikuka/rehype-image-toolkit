@@ -7,7 +7,12 @@ import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
 import { parse as split } from "space-separated-tokens";
 
-import { appendStyle, getExtension, parseAltDirective } from "./utils/index.js";
+import {
+  appendStyle,
+  getExtension,
+  parseAltDirective,
+  parseSrcWrapper,
+} from "./utils/index.js";
 import {
   getMdxJsxAttributeValue,
   updateOrAddMdxJsxAttribute,
@@ -138,20 +143,6 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     options,
   ) as Required<ImageToolkitOptions>;
 
-  const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
-  const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
-  const wwwRegex = /^www\./i; // www links
-  const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
-  const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
-
-  const SRC_WRAPPERS: {
-    wrapper: "bracket" | "parenthesis";
-    regex: RegExp;
-  }[] = [
-    { wrapper: "bracket", regex: /\[.*\]/ },
-    { wrapper: "parenthesis", regex: /\(.*\)/ },
-  ] as const;
-
   function isMediaElement(node: ElementContent): boolean {
     return isImageElement(node) || isVideoElement(node) || isAudioElement(node);
   }
@@ -264,7 +255,6 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         return;
       }
 
-      // just for type narrowing [node.data has always {_mdxExplicitJsx: true}]
       node.data ??= {};
 
       // Preparation part for adding figure and caption; also unwrapping **************
@@ -304,29 +294,15 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       // Preparation part for adding autolink ***************************************
 
       if (node.properties.src) {
-        let src = decodeURI(node.properties.src);
+        const { src, isValidAutolink, wrapper } = parseSrcWrapper(node.properties.src);
+        node.properties.src = src;
 
-        for (const { wrapper, regex } of SRC_WRAPPERS) {
-          if (regex.test(src)) {
-            src = src.slice(1, -1);
-            node.properties.src = src;
+        if (node.tagName === "img" && isValidAutolink) {
+          const isAnchorParent = isAnchorElement(parent);
+          const isFigurable = node.data.directiveFigure;
 
-            const isValidAutolink =
-              (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
-              rootRelativeRegex.test(src) ||
-              wwwRegex.test(src) ||
-              fileLinkRegex.test(src);
-
-            if (node.tagName === "img" && isValidAutolink) {
-              const isAnchorParent = isAnchorElement(parent);
-              const isFigurable = node.data.directiveFigure;
-
-              if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                node.data.directiveAutolink = wrapper;
-              }
-
-              break; // stop after the first match
-            }
+          if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+            node.data.directiveAutolink = wrapper! as "bracket" | "parenthesis";
           }
         }
       }
@@ -431,35 +407,21 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           const [srcType, srcValue] = getMdxJsxAttributeValue(srcAttribute);
 
           if (typeof srcValue === "string") {
-            let src = decodeURI(srcValue);
+            const { src, isValidAutolink, wrapper } = parseSrcWrapper(srcValue);
             monitoredSrc = src;
 
-            for (const { wrapper, regex } of SRC_WRAPPERS) {
-              if (regex.test(src)) {
-                src = src.slice(1, -1);
-                monitoredSrc = src;
+            if (srcType === "string") {
+              srcAttribute.value = src;
+            } else {
+              srcAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(src);
+            }
 
-                if (srcType === "string") {
-                  srcAttribute.value = src;
-                } else {
-                  srcAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(src);
-                }
+            if (node.name === "img" && isValidAutolink) {
+              const isAnchorParent = isAnchorMdxJsxElement(parent);
+              const isFigurable = node.data?.directiveFigure;
 
-                const isValidAutolink =
-                  (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
-                  rootRelativeRegex.test(src) ||
-                  wwwRegex.test(src) ||
-                  fileLinkRegex.test(src);
-
-                if (node.name === "img" && isValidAutolink) {
-                  const isAnchorParent = isAnchorMdxJsxElement(parent);
-                  const isFigurable = node.data?.directiveFigure;
-
-                  if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                    node.data.directiveAutolink = wrapper;
-                  }
-                  break; // stop after the first match
-                }
+              if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+                node.data.directiveAutolink = wrapper! as "bracket" | "parenthesis";
               }
             }
           }

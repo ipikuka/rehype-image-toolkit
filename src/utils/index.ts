@@ -46,3 +46,44 @@ export function parseAltDirective(alt: string): {
     value: undefined,
   };
 }
+
+interface ParseSrcResult {
+  src: string;
+  isValidAutolink: boolean;
+  wrapper: string | null;
+}
+
+export function parseSrcWrapper(originalSrc: string): ParseSrcResult {
+  const decodedSrc = decodeURI(originalSrc);
+
+  const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
+  const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
+  const wwwRegex = /^www\./i; // www links
+  const fileLinkRegex = /^[a-zA-Z0-9-_]+\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i;
+  const imageFileExtensionRegex = /\.(png|jpe?g|gif|webp|svg)(?=[?#]|$)/i; // Check if the source refers to an image (by file extension)
+
+  const SRC_WRAPPERS: {
+    wrapper: "bracket" | "parenthesis";
+    regex: RegExp;
+  }[] = [
+    { wrapper: "bracket", regex: /\[.*\]/ },
+    { wrapper: "parenthesis", regex: /\(.*\)/ },
+  ] as const;
+
+  for (const { wrapper, regex } of SRC_WRAPPERS) {
+    if (regex.test(decodedSrc)) {
+      const src = decodedSrc.slice(1, -1);
+
+      const isValidAutolink =
+        (imageFileExtensionRegex.test(src) && httpsRegex.test(src)) ||
+        rootRelativeRegex.test(src) ||
+        wwwRegex.test(src) ||
+        fileLinkRegex.test(src);
+
+      return { src, isValidAutolink, wrapper };
+    }
+  }
+
+  // No matching wrapper found; return original src with invalid status
+  return { src: decodedSrc, isValidAutolink: false, wrapper: null };
+}
