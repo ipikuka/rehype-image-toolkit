@@ -7,19 +7,19 @@ import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import type { VFileCompatible, VFile } from "vfile";
 
-import plugin, { type ImageHackOptions } from "../../src";
+import plugin, { type ImageToolkitOptions } from "../../src";
 
-const compilerCreatorFromHtml = (options?: ImageHackOptions) =>
+const compilerCreatorFromHtml = (options?: ImageToolkitOptions) =>
   unified().use(rehypeParse, { fragment: true }).use(plugin, options).use(rehypeStringify);
 
 export const processHtml = async (
   content: VFileCompatible,
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ): Promise<VFile> => {
   return compilerCreatorFromHtml(options).process(content);
 };
 
-const compilerCreatorFromMd = (options?: ImageHackOptions) =>
+const compilerCreatorFromMd = (options?: ImageToolkitOptions) =>
   unified()
     .use(remarkParse)
     .use(gfm)
@@ -29,12 +29,12 @@ const compilerCreatorFromMd = (options?: ImageHackOptions) =>
 
 export const processMd = async (
   content: VFileCompatible,
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ): Promise<VFile> => {
   return compilerCreatorFromMd(options).process(content);
 };
 
-const compilerCreatorRawFirst = (options?: ImageHackOptions) =>
+const compilerCreatorRawFirst = (options?: ImageToolkitOptions) =>
   unified()
     .use(remarkParse)
     .use(gfm)
@@ -45,12 +45,12 @@ const compilerCreatorRawFirst = (options?: ImageHackOptions) =>
 
 export const processMdRawFirst = async (
   content: VFileCompatible,
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ): Promise<VFile> => {
   return compilerCreatorRawFirst(options).process(content);
 };
 
-const compilerCreatorRawLast = (options?: ImageHackOptions) =>
+const compilerCreatorRawLast = (options?: ImageToolkitOptions) =>
   unified()
     .use(remarkParse)
     .use(gfm)
@@ -61,7 +61,7 @@ const compilerCreatorRawLast = (options?: ImageHackOptions) =>
 
 export const processMdRawLast = async (
   content: VFileCompatible,
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ): Promise<VFile> => {
   return compilerCreatorRawLast(options).process(content);
 };

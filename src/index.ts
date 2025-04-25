@@ -58,23 +58,23 @@ declare module "mdast-util-mdx-jsx" {
   }
 }
 
-export type ImageHackOptions = {
+export type ImageToolkitOptions = {
   figureCaptionPosition?: "above" | "below";
   implicitFigure?: boolean;
   alwaysAddControlsForVideos?: boolean;
   alwaysAddControlsForAudio?: boolean;
 };
 
-const DEFAULT_SETTINGS: ImageHackOptions = {
+const DEFAULT_SETTINGS: ImageToolkitOptions = {
   figureCaptionPosition: "below",
   implicitFigure: false,
   alwaysAddControlsForVideos: false,
   alwaysAddControlsForAudio: false,
 };
 
-type PartiallyRequiredImageHackOptions = Prettify<
+type PartiallyRequiredImageToolkitOptions = Prettify<
   PartiallyRequired<
-    ImageHackOptions,
+    ImageToolkitOptions,
     | "figureCaptionPosition"
     | "alwaysAddControlsForVideos"
     | "alwaysAddControlsForAudio"
@@ -144,19 +144,19 @@ const isAudioExt = (ext: string) => audioExtensions.indexOf(ext) >= 0;
 
 /**
  *
- * `rehype-image-hack` enhances markdown image syntax and MDX media elements (img, audio, video) by;
+ * `rehype-image-toolkit` enhances markdown image syntax and MDX media elements (img, audio, video) by;
  *  - adding style and attributes,
  *  - adding figure captions,
  *  - auto-linking images to originals,
  *  - converting images to video/audio based on the file extension
  *
  */
-const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
+const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
   const settings = Object.assign(
     {},
     DEFAULT_SETTINGS,
     options,
-  ) as PartiallyRequiredImageHackOptions;
+  ) as PartiallyRequiredImageToolkitOptions;
 
   const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
   const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)

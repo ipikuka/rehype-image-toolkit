@@ -1,5 +1,5 @@
 {
-  "name": "rehype-image-hack",
+  "name": "rehype-image-toolkit",
   "version": "0.14.0-beta",
   "description": "Rehype plugin to enhance markdown image syntax `![]()` and MDX media elements (`img`, `audio`, `video`) by styling and adding attributes, wrapping with figure and adding captions, auto-linking to originals, converting images to video/audio based on the file extension",
   "type": "module",
@@ -31,7 +31,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ipikuka/rehype-image-hack.git"
+    "url": "git+https://github.com/ipikuka/rehype-image-toolkit.git"
   },
   "keywords": [
     "unified",
@@ -52,9 +52,9 @@
   ],
   "author": "ipikuka <talatkuyuk@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/ipikuka/rehype-image-hack#readme",
+  "homepage": "https://github.com/ipikuka/rehype-image-toolkit#readme",
   "bugs": {
-    "url": "https://github.com/ipikuka/rehype-image-hack/issues"
+    "url": "https://github.com/ipikuka/rehype-image-toolkit/issues"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

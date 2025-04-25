@@ -6,7 +6,7 @@ import rehypeRaw from "rehype-raw";
 // for typing in MDXComponents
 import React from "react";
 
-// This util is designed for testing MDX content without plugin "rehype-image-hack"
+// This util is designed for testing MDX content without plugin "rehype-image-toolkit"
 
 export const processMdx = async (input: VFileCompatible, format: "md" | "mdx") => {
   const { content } = await evaluate({

@@ -6,12 +6,12 @@ import rehypeRaw from "rehype-raw";
 // for typing in MDXComponents
 import React from "react";
 
-import plugin, { type ImageHackOptions } from "../../src";
+import plugin, { type ImageToolkitOptions } from "../../src";
 
 export const processMdx = async (
   input: VFileCompatible,
   format: "md" | "mdx",
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ) => {
   const { content } = await evaluate({
     source: input,
@@ -34,7 +34,7 @@ export const processMdx = async (
 export const processMdxRaw = async (
   input: VFileCompatible,
   format: "md" | "mdx",
-  options?: ImageHackOptions,
+  options?: ImageToolkitOptions,
 ) => {
   const { content, error } = await evaluate({
     source: input,

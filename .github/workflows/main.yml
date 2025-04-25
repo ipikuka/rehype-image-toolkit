@@ -46,4 +46,4 @@ jobs:
           fail_ci_if_error: true
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ipikuka/rehype-image-hack
+          slug: ipikuka/rehype-image-toolkit

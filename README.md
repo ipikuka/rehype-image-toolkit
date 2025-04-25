@@ -1,4 +1,4 @@
-# rehype-image-hack
+# rehype-image-toolkit
 
 [![npm version][badge-npm-version]][url-npm-package]
 [![npm downloads][badge-npm-download]][url-npm-package]
@@ -12,15 +12,15 @@ This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **en
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
-Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-hack`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption, and unwrapping media from paragraph.
+Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-toolkit`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption, and unwrapping media from paragraph.
 
 ## When should I use this?
 
 **From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility.** For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph. **In some cases, I need more control—certain images should be excluded from these transformations.**
 
-**That's why I ensured each feature could be controlled individually through directives. This is the most distinct advantage of `rehype-image-hack` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
+**That's why I ensured each feature could be controlled individually through directives. This is the most distinct advantage of `rehype-image-toolkit` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
 
-**`rehype-image-hack`** is ideal for:
+**`rehype-image-toolkit`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
 + **styling and adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
 + **adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
@@ -32,13 +32,13 @@ Markdown natively supports images but lacks built-in syntax for videos and audio
 This package is suitable for ESM only. In Node.js (version 16+), install with npm:
 
 ```bash
-npm install rehype-image-hack
+npm install rehype-image-toolkit
 ```
 
 or
 
 ```bash
-yarn add rehype-image-hack
+yarn add rehype-image-toolkit
 ```
 
 ## Usage with markdown source
@@ -65,7 +65,7 @@ import { read } from "to-vfile";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import rehypeImageHack from "rehype-image-hack";
+import rehypeImageToolkit from "rehype-image-toolkit";
 import rehypeStringify from "rehype-stringify";
 
 main();
@@ -74,7 +74,7 @@ async function main() {
   const file = await unified()
     .use(remarkParse)
     .use(remarkRehype)
-    .use(rehypeImageHack)
+    .use(rehypeImageToolkit)
     .use(rehypeStringify)
     .process(await read("example.md"));
 
@@ -108,7 +108,7 @@ Now, running `node example.js` you will see.
 </video>
 ```
 
-Without `rehype-image-hack` the output would be:
+Without `rehype-image-toolkit` the output would be:
 
 ```html
 <p>It ensures adding videos/audio using image syntax. <img src="video.mp4" alt=""></p>
@@ -122,7 +122,7 @@ Without `rehype-image-hack` the output would be:
 
 ## Usage with html source
 
-Actually, you don't need to use **`rehype-image-hack`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
+Actually, you don't need to use **`rehype-image-toolkit`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
 
 Say `example.html` looks as follows:\
 *pay attention to directives*
@@ -156,7 +156,7 @@ Our module, `example.js`, looks as follows:
 import { read } from "to-vfile";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
-import rehypeImageHack from "rehype-image-hack";
+import rehypeImageToolkit from "rehype-image-toolkit";
 import rehypeStringify from "rehype-stringify";
 
 main();
@@ -164,7 +164,7 @@ main();
 async function main() {
   const file = await unified()
     .use(rehypeParse, { fragment: true })
-    .use(rehypeImageHack)
+    .use(rehypeImageToolkit)
     .use(rehypeStringify)
     .process(await read("example.md"));
 
@@ -206,7 +206,7 @@ Now, running `node example.js` you will see.
 
 ### Convert image syntax to videos and audio
 
-Markdown lacks built-in support for video and audio, only providing image syntax. **`rehype-image-hack`** repurposes the image syntax to render video and audio elements based on file extensions.
+Markdown lacks built-in support for video and audio, only providing image syntax. **`rehype-image-toolkit`** repurposes the image syntax to render video and audio elements based on file extensions.
 
 + `![](example.mp4)` is transformed into `<video>` element
 
@@ -224,13 +224,13 @@ Markdown lacks built-in support for video and audio, only providing image syntax
 </audio>
 ```
 
-Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-hack`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
+Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-toolkit`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
 
 ### Use the `title` attribute to customize images, videos, and audio
 
 As you know, Markdown’s image syntax supports an optional **`title`** attribute: **`![](image.png "title")`**
 
-**`rehype-image-hack`** extends this by recognizing custom directives after **greater operator (`>`)** in title.
+**`rehype-image-toolkit`** extends this by recognizing custom directives after **greater operator (`>`)** in title.
 
 ```markdown
 ![](my-video.mp4 "Video Title > controls autoplay loop .classname #id width=640 height=480")
@@ -351,7 +351,7 @@ According to the HTML specification, **anchor elements cannot be nested**. Despi
 
 Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element adding a caption.
 
-Since `<figure>` is block-level element by default, **`rehype-image-hack`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
+Since `<figure>` is block-level element by default, **`rehype-image-toolkit`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
 
 ```markdown
 ![^Caption of the image](image.png "title")
@@ -429,7 +429,7 @@ Add a **ampersand `&`** special directive at the start of the **alt** attribute 
 
 ### Keep videos/audio inline in paragraph
 
-Add a **tilda `~`** special directive at the start of the **alt** attribute in order to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-hack`** unwraps videos/audio from paragraph by default.
+Add a **tilda `~`** special directive at the start of the **alt** attribute in order to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-toolkit`** unwraps videos/audio from paragraph by default.
 
 ```markdown
 Here is the cat voice ![~](cat.mp3). So nice !
@@ -444,14 +444,14 @@ Here is the cat voice ![~](cat.mp3). So nice !
 All options are **optional** and have **default values**.
 
 ```typescript
-type ImageHackOptions = {
+type ImageToolkitOptions = {
   figureCaptionPosition?: "above" | "below"; // default is "below"
   alwaysAddControlsForVideos?: boolean; // default is "false"
   alwaysAddControlsForAudio?: boolean; // default is "false"
   implicitFigure?: true; // default is "false"
 };
 
-use(rehypeImageHack, ImageHackOptions);
+use(rehypeImageToolkit, ImageToolkitOptions);
 ```
 
 #### figureCaptionPosition
@@ -461,7 +461,7 @@ It is a **"above" | "below"** union string option which is for placing the capti
 By default, it is `below`.
 
 ```javascript
-use(rehypeImageHack, {
+use(rehypeImageToolkit, {
   figureCaptionPosition: "above",
 });
 ```
@@ -475,7 +475,7 @@ It is a **boolean** option which is for adding **`controls`** property to `video
 By default, it is `false`.
 
 ```javascript
-use(rehypeImageHack, {
+use(rehypeImageToolkit, {
   alwaysAddControlsForVideos: true,
 });
 ```
@@ -495,7 +495,7 @@ It is a **boolean** option which is for adding **`controls`** property to `audio
 By default, it is `false`.
 
 ```javascript
-use(rehypeImageHack, {
+use(rehypeImageToolkit, {
   alwaysAddControlsForAudio: true,
 });
 ```
@@ -512,7 +512,7 @@ Now, audio elements will have `controls` attribute by default.
 
 It is a **boolean** option which is for adding an image/video/audio into `<figure>` and adding a caption without any directive in the content **if it is alone in the paragraph**.
 
-By default, it is `false`. See more explanation [here][https://github.com/ipikuka/rehype-image-hack#add-caption-for-imagesvideosaudio-implicit-figure]
+By default, it is `false`. See more explanation [here][https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-implicit-figure]
 
 ```markdown
 ## Assume you set `{implicitFigure: true}`
@@ -528,7 +528,7 @@ This plugin modifies the `hast` (HTML abstract syntax tree).
 
 ## Types
 
-This package is fully typed with [TypeScript][url-typescript]. The plugin exports the type `ImageHackOptions`.
+This package is fully typed with [TypeScript][url-typescript]. The plugin exports the type `ImageToolkitOptions`.
 
 ## Compatibility
 
@@ -536,7 +536,7 @@ This plugin works with `rehype-parse` version 1+, `rehype-stringify` version 1+,
 
 ## Security
 
-Use of `rehype-image-hack` involves rehype (hast), but doesn't lead to cross-site scripting (XSS) attacks.
+Use of `rehype-image-toolkit` involves rehype (hast), but doesn't lead to cross-site scripting (XSS) attacks.
 
 ## My Plugins
 
@@ -567,7 +567,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
   – Rehype plugin to add line numbers to code blocks and allow highlighting of desired code lines
 - [`rehype-code-meta`](https://www.npmjs.com/package/rehype-code-meta)
   – Rehype plugin to copy `code.data.meta` to `code.properties.metastring`
-- [`rehype-image-hack`](https://www.npmjs.com/package/rehype-image-hack)
+- [`rehype-image-toolkit`](https://www.npmjs.com/package/rehype-image-toolkit)
   – Rehype plugin to enhance Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, unwrapping images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.
 
 ### My Recma Plugins
@@ -601,21 +601,21 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 [hast]: https://github.com/syntax-tree/hast
 [rehype-highlight]: https://github.com/rehypejs/rehype-highlight
 
-[badge-npm-version]: https://img.shields.io/npm/v/rehype-image-hack
-[badge-npm-download]:https://img.shields.io/npm/dt/rehype-image-hack
-[url-npm-package]: https://www.npmjs.com/package/rehype-image-hack
-[url-github-package]: https://github.com/ipikuka/rehype-image-hack
+[badge-npm-version]: https://img.shields.io/npm/v/rehype-image-toolkit
+[badge-npm-download]:https://img.shields.io/npm/dt/rehype-image-toolkit
+[url-npm-package]: https://www.npmjs.com/package/rehype-image-toolkit
+[url-github-package]: https://github.com/ipikuka/rehype-image-toolkit
 
-[badge-license]: https://img.shields.io/github/license/ipikuka/rehype-image-hack
-[url-license]: https://github.com/ipikuka/rehype-image-hack/blob/main/LICENSE
+[badge-license]: https://img.shields.io/github/license/ipikuka/rehype-image-toolkit
+[url-license]: https://github.com/ipikuka/rehype-image-toolkit/blob/main/LICENSE
 
-[badge-publish-to-npm]: https://github.com/ipikuka/rehype-image-hack/actions/workflows/publish.yml/badge.svg
-[url-publish-github-actions]: https://github.com/ipikuka/rehype-image-hack/actions/workflows/publish.yml
+[badge-publish-to-npm]: https://github.com/ipikuka/rehype-image-toolkit/actions/workflows/publish.yml/badge.svg
+[url-publish-github-actions]: https://github.com/ipikuka/rehype-image-toolkit/actions/workflows/publish.yml
 
-[badge-typescript]: https://img.shields.io/npm/types/rehype-image-hack
+[badge-typescript]: https://img.shields.io/npm/types/rehype-image-toolkit
 [url-typescript]: https://www.typescriptlang.org
 
-[badge-codecov]: https://codecov.io/gh/ipikuka/rehype-image-hack/graph/badge.svg?token=5qXNZ8iuYV
-[url-codecov]: https://codecov.io/gh/ipikuka/rehype-image-hack
+[badge-codecov]: https://codecov.io/gh/ipikuka/rehype-image-toolkit/graph/badge.svg?token=5qXNZ8iuYV
+[url-codecov]: https://codecov.io/gh/ipikuka/rehype-image-toolkit
 
-[badge-type-coverage]: https://img.shields.io/badge/dynamic/json.svg?label=type-coverage&prefix=%E2%89%A5&suffix=%&query=$.typeCoverage.atLeast&uri=https%3A%2F%2Fraw.githubusercontent.com%2Fipikuka%2Frehype-image-hack%2Fmain%2Fpackage.json
+[badge-type-coverage]: https://img.shields.io/badge/dynamic/json.svg?label=type-coverage&prefix=%E2%89%A5&suffix=%&query=$.typeCoverage.atLeast&uri=https%3A%2F%2Fraw.githubusercontent.com%2Fipikuka%2Frehype-image-toolkit%2Fmain%2Fpackage.json

@@ -6,7 +6,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import type { VFileCompatible, VFile } from "vfile";
 
-// This util is designed for testing markdown/html content without plugin "rehype-image-hack"
+// This util is designed for testing markdown/html content without plugin "rehype-image-toolkit"
 
 export const processHtml = async (content: VFileCompatible) => {
   return unified().use(rehypeParse, { fragment: true }).use(rehypeStringify).process(content);
