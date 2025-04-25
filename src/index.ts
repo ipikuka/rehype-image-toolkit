@@ -17,9 +17,7 @@ import {
   removeMdxJsxAttribute,
 } from "./utils/util.mdxjsx.js";
 
-type Prettify<T> = { [K in keyof T]: T[K] } & {};
-
-type PartiallyRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+type ElementX = Element | MdxJsxFlowElementHast | MdxJsxTextElementHast;
 
 interface DirectiveData {
   directiveAutolink?: "bracket" | "parenthesis";
@@ -59,15 +57,6 @@ const DEFAULT_SETTINGS: ImageToolkitOptions = {
   addControlsForVideos: false,
   addControlsForAudio: false,
 };
-
-type PartiallyRequiredImageToolkitOptions = Prettify<
-  PartiallyRequired<
-    ImageToolkitOptions,
-    "figureCaptionPosition" | "addControlsForVideos" | "addControlsForAudio" | "implicitFigure"
-  >
->;
-
-type ElementX = Element | MdxJsxFlowElementHast | MdxJsxTextElementHast;
 
 const htmlToReactAttrMap: Record<string, string> = {
   // Global
@@ -143,7 +132,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     {},
     DEFAULT_SETTINGS,
     options,
-  ) as PartiallyRequiredImageToolkitOptions;
+  ) as Required<ImageToolkitOptions>;
 
   const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
   const rootRelativeRegex = /^\/[^/]+/; // Root-relative links (e.g., /image.png)
