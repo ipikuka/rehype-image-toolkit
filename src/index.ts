@@ -60,12 +60,14 @@ declare module "mdast-util-mdx-jsx" {
 
 export type ImageHackOptions = {
   figureCaptionPosition?: "above" | "below";
+  implicitFigure?: boolean;
   alwaysAddControlsForVideos?: boolean;
   alwaysAddControlsForAudio?: boolean;
 };
 
 const DEFAULT_SETTINGS: ImageHackOptions = {
   figureCaptionPosition: "below",
+  implicitFigure: false,
   alwaysAddControlsForVideos: false,
   alwaysAddControlsForAudio: false,
 };
@@ -73,7 +75,10 @@ const DEFAULT_SETTINGS: ImageHackOptions = {
 type PartiallyRequiredImageHackOptions = Prettify<
   PartiallyRequired<
     ImageHackOptions,
-    "figureCaptionPosition" | "alwaysAddControlsForVideos" | "alwaysAddControlsForAudio"
+    | "figureCaptionPosition"
+    | "alwaysAddControlsForVideos"
+    | "alwaysAddControlsForAudio"
+    | "implicitFigure"
   >
 >;
 
@@ -167,14 +172,43 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     { wrapper: "parenthesis", regex: /\(.*\)/ },
   ] as const;
 
+  function hasOneChildMedia(
+    node: MdxJsxFlowElementHast | MdxJsxTextElementHast | Element,
+  ): boolean {
+    if (node.children.length === 1) {
+      const child = node.children[0];
+      return isImageElement(child) || isVideoElement(child) || isAudioElement(child);
+    }
+
+    return false;
+  }
+
+  function isImageElement(
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is Element {
+    return node.type === "element" && node.tagName === "img";
+  }
+
+  function isVideoElement(
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is Element {
+    return node.type === "element" && node.tagName === "video";
+  }
+
+  function isAudioElement(
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is Element {
+    return node.type === "element" && node.tagName === "audio";
+  }
+
   function isFigureElement(
-    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
   ): node is Element {
     return node.type === "element" && node.tagName === "figure";
   }
 
   function isAnchorElement(
-    node: Root | Element | MdxJsxTextElementHast | MdxJsxFlowElementHast | ElementContent,
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
   ): node is Element {
     return node.type === "element" && node.tagName === "a";
   }
@@ -187,16 +221,22 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     return node?.type === "mdxJsxTextElement" || node?.type === "mdxJsxFlowElement";
   }
 
-  function isAnchorMdxJsxElement(
+  function isImageMdxJsxElement(
     node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
-  ): node is MdxJsxTextElementHast | MdxJsxFlowElementHast {
-    return isMdxJsxElement(node) && node.name === "a";
+  ): boolean {
+    return isMdxJsxElement(node) && node.name === "img";
   }
 
   function isFigureMdxJsxElement(
     node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
   ): boolean {
     return isMdxJsxElement(node) && node.name === "figure";
+  }
+
+  function isAnchorMdxJsxElement(
+    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
+  ): node is MdxJsxTextElementHast | MdxJsxFlowElementHast {
+    return isMdxJsxElement(node) && node.name === "a";
   }
 
   function isParagraphMdxJsxFlowElement(
@@ -209,6 +249,12 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
     node: RootContent | ElementContent,
   ): node is Element | MdxJsxFlowElementHast {
     return isParagraphElement(node) || isParagraphMdxJsxFlowElement(node);
+  }
+
+  function isTarget(
+    node: ElementContent,
+  ): node is Element | MdxJsxFlowElementHast | MdxJsxTextElementHast {
+    return node.type === "element" || isMdxJsxElement(node);
   }
 
   // TODO: support svg
@@ -469,6 +515,9 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       },
     );
 
+    // console.log before unravelling
+    // console.dir(tree, { depth: 12 });
+
     /**
      * unravelling visit on <p> Elements or <p> MdxJsxFlowElements
      *
@@ -485,6 +534,61 @@ const plugin: Plugin<[ImageHackOptions?], Root> = (options) => {
       if (node.type === "root" || node.type === "doctype") return;
 
       if (!isParagraph(node)) return;
+
+      /********** Check the node if it has a implicit figure **********************/
+
+      if (settings.implicitFigure && node.children.length === 1) {
+        let implicitFigureElement:
+          | Element
+          | MdxJsxFlowElementHast
+          | MdxJsxTextElementHast
+          | undefined = undefined;
+
+        const child = node.children[0];
+        if (hasOneChildMedia(node)) {
+          implicitFigureElement = isTarget(child) ? child : undefined;
+        } else if (
+          (isAnchorElement(child) && hasOneChildMedia(child)) ||
+          (isAnchorMdxJsxElement(child) && hasOneChildMedia(child))
+        ) {
+          const grandChild = child.children[0];
+          implicitFigureElement = isTarget(grandChild) ? grandChild : undefined;
+        }
+
+        if (implicitFigureElement) {
+          if ("properties" in implicitFigureElement) {
+            if (
+              !implicitFigureElement.properties.directiveInline &&
+              !implicitFigureElement.properties.directiveUnwrap
+            ) {
+              implicitFigureElement.properties.directiveFigure = true;
+              implicitFigureElement.properties.directiveCaption =
+                implicitFigureElement.properties.alt;
+            }
+          } else if ("attributes" in implicitFigureElement) {
+            let alt: string | undefined = undefined;
+            const altAttribute = getMdxJsxAttribute(implicitFigureElement.attributes, "alt");
+            if (altAttribute) {
+              const altOriginal = getMdxJsxAttributeValue(altAttribute)[1];
+              if (typeof altOriginal === "string") {
+                alt = altOriginal;
+              }
+            }
+
+            if ((implicitFigureElement.data ??= {})) {
+              if (
+                !implicitFigureElement.data.directiveInline &&
+                !implicitFigureElement.data.directiveUnwrap
+              ) {
+                implicitFigureElement.data.directiveFigure = true;
+                implicitFigureElement.data.directiveCaption = alt;
+              }
+            }
+          }
+        }
+      }
+
+      /**********************************************************************************/
 
       const newNodes: RootContent[] = [];
       let currentParagraph: Element | MdxJsxFlowElementHast = createEmptyParagraph();
