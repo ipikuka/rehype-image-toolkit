@@ -1,7 +1,7 @@
 import type { Plugin } from "unified";
 
 import type { MdxJsxFlowElementHast, MdxJsxTextElementHast } from "mdast-util-mdx-jsx";
-import type { Element, Root, RootContent, Text, ElementContent, Doctype } from "hast";
+import type { Element, Root, RootContent, Text, ElementContent } from "hast";
 import { visit, type VisitorResult } from "unist-util-visit";
 import { visitParents } from "unist-util-visit-parents";
 import { whitespace } from "hast-util-whitespace";
@@ -21,6 +21,16 @@ type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 type PartiallyRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
+interface DirectiveData {
+  directiveAutolink?: "bracket" | "parenthesis";
+  directiveFigure?: boolean;
+  directiveCaption?: string;
+  directiveConversion?: string;
+  directiveTitle?: string;
+  directiveUnwrap?: boolean;
+  directiveInline?: boolean;
+}
+
 declare module "hast" {
   interface Properties {
     src?: string;
@@ -28,37 +38,12 @@ declare module "hast" {
     alt?: string;
   }
 
-  interface ElementData {
-    directiveAutolink?: "bracket" | "parenthesis";
-    directiveFigure?: boolean;
-    directiveCaption?: string;
-    directiveConversion?: string;
-    directiveTitle?: string;
-    directiveUnwrap?: boolean;
-    directiveInline?: boolean;
-  }
+  interface ElementData extends DirectiveData {}
 }
 
 declare module "mdast-util-mdx-jsx" {
-  interface MdxJsxFlowElementHastData {
-    directiveAutolink?: "bracket" | "parenthesis";
-    directiveFigure?: boolean;
-    directiveCaption?: string;
-    directiveConversion?: string;
-    directiveTitle?: string;
-    directiveUnwrap?: boolean;
-    directiveInline?: boolean;
-  }
-
-  interface MdxJsxTextElementHastData {
-    directiveAutolink?: "bracket" | "parenthesis";
-    directiveFigure?: boolean;
-    directiveCaption?: string;
-    directiveConversion?: string;
-    directiveTitle?: string;
-    directiveUnwrap?: boolean;
-    directiveInline?: boolean;
-  }
+  interface MdxJsxFlowElementHastData extends DirectiveData {}
+  interface MdxJsxTextElementHastData extends DirectiveData {}
 }
 
 export type ImageToolkitOptions = {
@@ -212,7 +197,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
     return node.type === "element" && node.tagName === "p";
   }
 
-  function isMdxJsxElement(node: Root | ElementContent | Doctype | ElementContent) {
+  function isMdxJsxElement(node: Root | ElementContent | ElementContent) {
     return node?.type === "mdxJsxTextElement" || node?.type === "mdxJsxFlowElement";
   }
 
@@ -633,7 +618,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       }
 
       function createEmptyParagraph(): Element | MdxJsxFlowElementHast {
-        if (isMdxJsxElement(node)) {
+        if (isMdxJsxElement(node as ElementContent)) {
           return {
             type: "mdxJsxFlowElement",
             name: "p",
