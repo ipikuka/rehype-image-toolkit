@@ -36,11 +36,15 @@ declare module "hast" {
     alt?: string;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface ElementData extends DirectiveData {}
 }
 
 declare module "mdast-util-mdx-jsx" {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface MdxJsxFlowElementHastData extends DirectiveData {}
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface MdxJsxTextElementHastData extends DirectiveData {}
 }
 
