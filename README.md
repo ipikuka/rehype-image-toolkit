@@ -43,7 +43,7 @@ yarn add rehype-image-hack
 
 ## Usage with markdown source
 
-Say we have the following markdown file, `example.md`:\
+Say we have the following markdown file, `example.md`:  
 *pay attention to directives*
 
 ```markdown
@@ -117,6 +117,8 @@ Without `rehype-image-hack` the output would be:
 <p>It unwraps images from paragraph <img src="image.png" alt="&#x26;alt"></p>
 <p>It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay"></p>
 ```
+
+// TODO add usage with reference in markdown
 
 ## Usage with html source
 
@@ -391,6 +393,30 @@ If you want just a regular inline image, do not use any **`^`** directive in the
 ![This image won't be within a figure element](image.png)
 ```
 
+### Add caption for images/videos/audio (Implicit Figure)
+
+There is an option **`implicitFigure`** for adding an image/video/audio into `<figure>` and for adding a caption. If you set **`{implicitFigure: true}`** in the options, an image will be rendered as a figure with a caption **if it is alone in the paragraph** without any directive in the content. The image’s alt text will be used as the caption. This feature is aligned with [pandoc markdown implicit figure](https://pandoc.org/MANUAL.html#extension-implicit_figures).
+
+```markdown
+## Assume you set `{implicitFigure: true}`
+
+![This will be the caption in figure element](image.png)
+```
+
+If you just want a regular inline image, when you set **`{implicitFigure: true}`**, just make sure it is not the only thing in the paragraph or put a **tilda `~`** or **ampersand `&`** directives in the start of the image, since these directives have priority:
+
+```markdown
+## Assume you set `{implicitFigure: true}`
+
+### This image won't be a `<figure>` and stay in the paragraph as inline content
+![~alt](image.png)
+
+### This image won't be a `<figure>`, but to be unwrapped from paragraph
+![&alt](image.png)
+```markdown
+
+Just I want to stress again that if you want the image be in a `<figure>` you can use directive **`caret ^`** in the start of **alt** for explicit figure, as explained in the previous. No matter what the image is alone or not.
+
 ### Unwrap images from paragraph
 
 Add a **ampersand `&`** special directive at the start of the **alt** attribute in order to unwrap the image from paragraph. Sometime you may want to unwrap images without adding it in a `<figure>`. This directive ensures the image is extracted without adding it in a figure.
@@ -401,7 +427,7 @@ Add a **ampersand `&`** special directive at the start of the **alt** attribute 
 ![&alt](image.png)
 ```
 
-### Keep inline videos/audio in paragraph
+### Keep videos/audio inline in paragraph
 
 Add a **tilda `~`** special directive at the start of the **alt** attribute in order to keep videos/audio in a paragraph. This is helpful when you want these elements to remain inline in the paragraph. Normally, **`rehype-image-hack`** unwraps videos/audio from paragraph by default.
 
@@ -422,6 +448,7 @@ type ImageHackOptions = {
   figureCaptionPosition?: "above" | "below"; // default is "below"
   alwaysAddControlsForVideos?: boolean; // default is "false"
   alwaysAddControlsForAudio?: boolean; // default is "false"
+  implicitFigure?: true; // default is "false"
 };
 
 use(rehypeImageHack, ImageHackOptions);
@@ -479,6 +506,18 @@ Now, audio elements will have `controls` attribute by default.
 <audio controls>
   <source src="example.mp3" type="audio/mpeg">
 </audio>
+```
+
+#### implicitFigure
+
+It is a **boolean** option which is for adding an image/video/audio into `<figure>` and adding a caption without any directive in the content **if it is alone in the paragraph**.
+
+By default, it is `false`. See more explanation [here][https://github.com/ipikuka/rehype-image-hack#add-caption-for-imagesvideosaudio-implicit-figure]
+
+```markdown
+## Assume you set `{implicitFigure: true}`
+
+![This will be the caption in figure element](image.png)
 ```
 
 ### Examples:
