@@ -16,9 +16,11 @@ Markdown natively supports images but lacks built-in syntax for videos and audio
 
 ## When should I use this?
 
-**From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility.** For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph. **In some cases, I need more control—certain images should be excluded from these transformations.**
+**From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. In some cases, I need more control—certain images should be excluded from these transformations.** For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph.
 
-**That's why I ensured each feature could be controlled individually through directives. This is the most distinct advantage of `rehype-image-toolkit` compared to others.** Additionally, I designed it with an **"all-in-one toolkit"** approach to provide all the essential features related to images in a single solution in markdown/MDX.
+**That's why each feature in `rehype-image-toolkit` is individually controllable via directives. Its most distinct advantage over other remark/rehype plugins.**
+
+I designed **`rehype-image-toolkit`** as an all-in-one solution, bringing together all essential image-related features for markdown and MDX in a **single toolkit**.
 
 **`rehype-image-toolkit`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
@@ -43,8 +45,8 @@ yarn add rehype-image-toolkit
 
 ## Usage with markdown source
 
-Say we have the following markdown file, `example.md`:  
-*pay attention to directives*
+Say we have the following markdown file, `example.md`:\
+*(pay attention to directives)*
 
 ```markdown
 It ensures adding videos/audio using image syntax. ![](video.mp4) 
@@ -125,7 +127,7 @@ Without `rehype-image-toolkit` the output would be:
 Actually, you don't need to use **`rehype-image-toolkit`** for html sources since you can write direct html structure for adding figure and caption, adding attributes and wrapping assets with an anchor link. But anyway, **I've wanted to support that features for html sources as well.**
 
 Say `example.html` looks as follows:\
-*pay attention to directives*
+*(pay attention to directives)*
 
 ```html
 <p>
@@ -224,7 +226,7 @@ Markdown lacks built-in support for video and audio, only providing image syntax
 </audio>
 ```
 
-Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-toolkit`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you need it is not to be extracted from paragraph use **tilda `~`** in the begining of alt **`![~](example.mp3)`**. It may be useful if yo want an audio to be an inline element within paragraph in support of CSS.
+Since `<video>` and `<audio>` are block-level elements by default, **`rehype-image-toolkit`** unwraps them from paragraphs, splitting the text or other content around their original positions. If you don't want a video/audio to be extracted from paragraph use **tilda `~`** in the begining of alt text **`![~](example.mp3)`**. It may be useful if you want an audio to be an inline element within paragraph in support of CSS.
 
 ### Use the `title` attribute to customize images, videos, and audio
 
@@ -349,7 +351,7 @@ According to the HTML specification, **anchor elements cannot be nested**. Despi
 
 ### Add caption for images/videos/audio (Explicit Figure)
 
-Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element adding a caption.
+Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element and add a caption.
 
 Since `<figure>` is block-level element by default, **`rehype-image-toolkit`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
 
@@ -395,7 +397,7 @@ If you want just a regular inline image, do not use any **`^`** directive in the
 
 ### Add caption for images/videos/audio (Implicit Figure)
 
-There is an option **`implicitFigure`** for adding an image/video/audio into `<figure>` and for adding a caption. If you set **`{implicitFigure: true}`** in the options, an image will be rendered as a figure with a caption **if it is alone in the paragraph** without any directive in the content. The image’s alt text will be used as the caption. This feature is aligned with [pandoc markdown implicit figure](https://pandoc.org/MANUAL.html#extension-implicit_figures).
+There is an option **`implicitFigure`** for adding an image/video/audio into `<figure>` and adding a caption. If you set **`{implicitFigure: true}`** in the options, an image will be rendered as a figure without any directive in the content **if it is alone in the paragraph** . The image’s alt text will be used as the caption. This feature is aligned with [pandoc markdown implicit figure](https://pandoc.org/MANUAL.html#extension-implicit_figures).
 
 ```markdown
 ## Assume you set `{implicitFigure: true}`
@@ -403,17 +405,19 @@ There is an option **`implicitFigure`** for adding an image/video/audio into `<f
 ![This will be the caption in figure element](image.png)
 ```
 
-If you just want a regular inline image, when you set **`{implicitFigure: true}`**, just make sure it is not the only thing in the paragraph or put a **tilda `~`** or **ampersand `&`** directives in the start of the image, since these directives have priority:
+If you just want a regular inline image, when you set **`{implicitFigure: true}`**, just make sure it is not the only thing in the paragraph or put a **tilda `~`** or **ampersand `&`** directives in the start of **alt** attribute, since these directives have priority:
 
 ```markdown
 ## Assume you set `{implicitFigure: true}`
 
 ### This image won't be a `<figure>` and stay in the paragraph as inline content
+
 ![~alt](image.png)
 
-### This image won't be a `<figure>`, but to be unwrapped from paragraph
+### This image won't be a `<figure>`, but it is going to be unwrapped from paragraph
+
 ![&alt](image.png)
-```markdown
+```
 
 Just I want to stress again that if you want the image be in a `<figure>` you can use directive **`caret ^`** in the start of **alt** for explicit figure, as explained in the previous. No matter what the image is alone or not.
 
@@ -512,7 +516,7 @@ Now, audio elements will have `controls` attribute by default.
 
 It is a **boolean** option which is for adding an image/video/audio into `<figure>` and adding a caption without any directive in the content **if it is alone in the paragraph**.
 
-By default, it is `false`. See more explanation [here][https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-implicit-figure]
+By default, it is `false`. See more explanation [here](https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-implicit-figure).
 
 ```markdown
 ## Assume you set `{implicitFigure: true}`
