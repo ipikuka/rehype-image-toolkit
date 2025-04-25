@@ -33,6 +33,37 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
+  // TODO: Add this also README.md
+  // ******************************************
+  it("handle references to images", async () => {
+    const input = dedent`
+      Here is the cat image ![cat image][reference-image] and its sound inline ![~][reference-audio].
+
+      [reference-image]: [image.png] "title"
+      [reference-audio]: audio.mp3 "title > autoplay"
+    `;
+
+    const html = String(await processMd(input));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p>
+        Here is the cat image
+        <a href="image.png" target="_blank"
+          ><img src="image.png" alt="cat image" title="title"
+        /></a>
+        and its sound inline
+        <audio title="title" autoplay>
+          <source src="audio.mp3" type="audio/mpeg" /></audio
+        >.
+      </p>
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p>Here is the cat image <a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="title"></a> and its sound inline <audio title="title" autoplay><source src="audio.mp3" type="audio/mpeg"></audio>.</p>"
+    `);
+  });
+
   // ******************************************
   it("handle basic paragraph that consists of images to be transformed to videos/audio", async () => {
     const input = dedent`
@@ -142,7 +173,68 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle adding caption for images", async () => {
+  it("handle the implicitFigure option", async () => {
+    const input = dedent`
+      ![&hello](image.png)
+
+      ![~hello](image.png)
+
+      ![^hello](image.png)
+
+      ![hello](image.png)
+
+      ![hello]([image.png])
+
+      ![hello]((image.png))
+
+      [![hello](image.png)](http://example.com)
+    `;
+
+    const html = String(await processMd(input, { implicitFigure: true }));
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="hello" />
+      <p><img src="image.png" alt="hello" /></p>
+      <figure>
+        <img src="image.png" alt="hello" />
+        <figcaption>hello</figcaption>
+      </figure>
+      <figure>
+        <img src="image.png" alt="hello" />
+        <figcaption>hello</figcaption>
+      </figure>
+      <a href="image.png" target="_blank"
+        ><figure>
+          <img src="image.png" alt="hello" />
+          <figcaption>hello</figcaption>
+        </figure></a
+      >
+      <figure>
+        <a href="image.png" target="_blank"><img src="image.png" alt="hello" /></a>
+        <figcaption>hello</figcaption>
+      </figure>
+      <a href="http://example.com"
+        ><figure>
+          <img src="image.png" alt="hello" />
+          <figcaption>hello</figcaption>
+        </figure></a
+      >
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="hello">
+      <p><img src="image.png" alt="hello"></p>
+      <figure><img src="image.png" alt="hello"><figcaption>hello</figcaption></figure>
+      <figure><img src="image.png" alt="hello"><figcaption>hello</figcaption></figure>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="hello"><figcaption>hello</figcaption></figure></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="hello"></a><figcaption>hello</figcaption></figure>
+      <a href="http://example.com"><figure><img src="image.png" alt="hello"><figcaption>hello</figcaption></figure></a>"
+    `);
+  });
+
+  // ******************************************
+  it("handle adding caption for images, explicit figure", async () => {
     const input = dedent`
       ![^^Hello](image.png)
 

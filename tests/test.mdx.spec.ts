@@ -141,6 +141,67 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
+  it("handle the implicitFigure option", async () => {
+    const input = dedent`
+      ![&hello](image.png)
+
+      ![~hello](image.png)
+
+      ![^hello](image.png)
+
+      ![hello](image.png)
+
+      ![hello]([image.png])
+
+      ![hello]((image.png))
+
+      [![hello](image.png)](http://example.com)
+    `;
+
+    const html = await processMdx(input, "mdx", { implicitFigure: true });
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="hello" />
+      <p><img src="image.png" alt="hello" /></p>
+      <figure>
+        <img src="image.png" alt="hello" />
+        <figcaption>hello</figcaption>
+      </figure>
+      <figure>
+        <img src="image.png" alt="hello" />
+        <figcaption>hello</figcaption>
+      </figure>
+      <a href="image.png" target="_blank"
+        ><figure>
+          <img src="image.png" alt="hello" />
+          <figcaption>hello</figcaption>
+        </figure></a
+      >
+      <figure>
+        <a href="image.png" target="_blank"><img src="image.png" alt="hello" /></a>
+        <figcaption>hello</figcaption>
+      </figure>
+      <a href="http://example.com"
+        ><figure>
+          <img src="image.png" alt="hello" />
+          <figcaption>hello</figcaption>
+        </figure></a
+      >
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`
+      "<img src="image.png" alt="hello"/>
+      <p><img src="image.png" alt="hello"/></p>
+      <figure><img src="image.png" alt="hello"/><figcaption>hello</figcaption></figure>
+      <figure><img src="image.png" alt="hello"/><figcaption>hello</figcaption></figure>
+      <a href="image.png" target="_blank"><figure><img src="image.png" alt="hello"/><figcaption>hello</figcaption></figure></a>
+      <figure><a href="image.png" target="_blank"><img src="image.png" alt="hello"/></a><figcaption>hello</figcaption></figure>
+      <a href="http://example.com"><figure><img src="image.png" alt="hello"/><figcaption>hello</figcaption></figure></a>"
+    `);
+  });
+
+  // ******************************************
   it("handle adding caption for images", async () => {
     const input = dedent`
       ![^^Hello](image.png)
