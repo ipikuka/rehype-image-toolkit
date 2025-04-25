@@ -26,6 +26,9 @@ declare module "hast" {
     src?: string;
     title?: string;
     alt?: string;
+  }
+
+  interface ElementData {
     directiveAutolink?: "bracket" | "parenthesis";
     directiveFigure?: boolean;
     directiveCaption?: string;
@@ -283,6 +286,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         return;
       }
 
+      // just for type narrowing [node.data has always {_mdxExplicitJsx: true}]
+      node.data ??= {};
+
       // Preparation part for adding figure and caption; also unwrapping **************
 
       if (typeof node.properties.alt === "string") {
@@ -295,24 +301,24 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
         switch (directive) {
           case "directiveFigureCaption":
-            node.properties.directiveCaption = value;
+            node.data.directiveCaption = value;
             if (!isFigureElement(parent)) {
-              node.properties.directiveFigure = true;
+              node.data.directiveFigure = true;
             }
             break;
 
           case "directiveOnlyFigure":
             if (!isFigureElement(parent)) {
-              node.properties.directiveFigure = true;
+              node.data.directiveFigure = true;
             }
             break;
 
           case "directiveUnwrap":
-            node.properties.directiveUnwrap = true;
+            node.data.directiveUnwrap = true;
             break;
 
           case "directiveInline":
-            node.properties.directiveInline = true;
+            node.data.directiveInline = true;
             break;
         }
       }
@@ -335,10 +341,10 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
             if (node.tagName === "img" && isValidAutolink) {
               const isAnchorParent = isAnchorElement(parent);
-              const isFigurable = node.properties.directiveFigure;
+              const isFigurable = node.data.directiveFigure;
 
               if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                node.properties.directiveAutolink = wrapper;
+                node.data.directiveAutolink = wrapper;
               }
 
               break; // stop after the first match
@@ -354,7 +360,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
 
         if (needsConversion) {
-          node.properties.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+          node.data.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
         }
       }
 
@@ -363,7 +369,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       if (node.properties.title && node.properties.title.includes(">")) {
         const [title, directive] = node.properties.title.split(">").map((t) => t.trim());
         node.properties.title = title || undefined;
-        node.properties.directiveTitle = directive || undefined;
+        node.data.directiveTitle = directive || undefined;
       }
     });
 
@@ -554,18 +560,15 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           }
         }
 
-        if (implicitFigureElement) {
+        if (
+          implicitFigureElement &&
+          !implicitFigureElement.data?.directiveInline &&
+          !implicitFigureElement.data?.directiveUnwrap
+        ) {
+          let alt: string | undefined = undefined;
           if ("properties" in implicitFigureElement) {
-            if (
-              !implicitFigureElement.properties.directiveInline &&
-              !implicitFigureElement.properties.directiveUnwrap
-            ) {
-              implicitFigureElement.properties.directiveFigure = true;
-              implicitFigureElement.properties.directiveCaption =
-                implicitFigureElement.properties.alt;
-            }
+            alt = implicitFigureElement.properties.alt;
           } else if ("attributes" in implicitFigureElement) {
-            let alt: string | undefined = undefined;
             const altAttribute = getMdxJsxAttribute(implicitFigureElement.attributes, "alt");
             if (altAttribute) {
               const altOriginal = getMdxJsxAttributeValue(altAttribute)[1];
@@ -573,16 +576,11 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
                 alt = altOriginal;
               }
             }
+          }
 
-            if ((implicitFigureElement.data ??= {})) {
-              if (
-                !implicitFigureElement.data.directiveInline &&
-                !implicitFigureElement.data.directiveUnwrap
-              ) {
-                implicitFigureElement.data.directiveFigure = true;
-                implicitFigureElement.data.directiveCaption = alt;
-              }
-            }
+          if ((implicitFigureElement.data ??= {})) {
+            implicitFigureElement.data.directiveFigure = true;
+            implicitFigureElement.data.directiveCaption = alt;
           }
         }
       }
@@ -682,21 +680,21 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
         function isMarked(el: Element): boolean {
           return (
-            !el.properties.directiveInline &&
-            (el.properties.directiveUnwrap ||
-              el.properties.directiveFigure ||
-              Boolean(el.properties.directiveConversion))
+            !el.data?.directiveInline &&
+            (el.data?.directiveUnwrap ||
+              el.data?.directiveFigure ||
+              Boolean(el.data?.directiveConversion))
           );
         }
 
         const isRelevantImage = element.tagName === "img" && isMarked(element);
-        const isVideo = element.tagName === "video" && !element.properties.directiveInline;
-        const isAudio = element.tagName === "audio" && !element.properties.directiveInline;
+        const isVideo = element.tagName === "video" && !element.data?.directiveInline;
+        const isAudio = element.tagName === "audio" && !element.data?.directiveInline;
         const isFigure = element.tagName === "figure";
 
         function cleanDirectives(el: Element) {
-          delete el.properties.directiveUnwrap;
-          delete el.properties.directiveInline;
+          delete el.data?.directiveUnwrap;
+          delete el.data?.directiveInline;
         }
 
         cleanDirectives(element);
@@ -766,10 +764,10 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
       // The application part for adding figure and caption ****************************
 
-      if (node.properties.directiveFigure) {
-        const caption = node.properties.directiveCaption;
-        node.properties.directiveFigure = undefined;
-        node.properties.directiveCaption = undefined;
+      if (node.data?.directiveFigure) {
+        const caption = node.data.directiveCaption;
+        node.data.directiveFigure = undefined;
+        node.data.directiveCaption = undefined;
 
         const figcaptionElement: Element = {
           type: "element",
@@ -792,9 +790,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         parent.children.splice(index, 1, figureElement);
 
         return index;
-      } else if (node.properties.directiveCaption) {
-        const caption = node.properties.directiveCaption;
-        node.properties.directiveCaption = undefined;
+      } else if (node.data?.directiveCaption) {
+        const caption = node.data.directiveCaption;
+        node.data.directiveCaption = undefined;
 
         const figcaptionElement: Element = {
           type: "element",
@@ -814,9 +812,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
       // The application part for conversion to video/audio ****************************
 
-      if (node.properties.directiveConversion) {
-        const [newTagName, extension] = node.properties.directiveConversion.split("/");
-        node.properties.directiveConversion = undefined;
+      if (node.data?.directiveConversion) {
+        const [newTagName, extension] = node.data.directiveConversion.split("/");
+        node.data.directiveConversion = undefined;
 
         const src = node.properties.src;
         node.properties.src = undefined;
@@ -857,9 +855,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
       // The application part for adding attributes utilizing title ************************
 
-      if (node.properties.directiveTitle) {
-        const attrs = split(node.properties.directiveTitle);
-        node.properties.directiveTitle = undefined;
+      if (node.data?.directiveTitle) {
+        const attrs = split(node.data.directiveTitle);
+        node.data.directiveTitle = undefined;
 
         attrs.forEach((attr) => {
           if (attr.startsWith("#")) {
@@ -909,10 +907,10 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
       // The application part for adding autolink ***********************************
 
-      if (node.properties.directiveAutolink) {
+      if (node.data?.directiveAutolink) {
         const src = node.properties.src;
-        const marker = node.properties.directiveAutolink;
-        node.properties.directiveAutolink = undefined;
+        const marker = node.data.directiveAutolink;
+        node.data.directiveAutolink = undefined;
 
         const isFigureParent = isFigureElement(parent);
         if (isFigureParent && marker === "bracket") {
