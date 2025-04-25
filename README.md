@@ -450,8 +450,8 @@ All options are **optional** and have **default values**.
 ```typescript
 type ImageToolkitOptions = {
   figureCaptionPosition?: "above" | "below"; // default is "below"
-  alwaysAddControlsForVideos?: boolean; // default is "false"
-  alwaysAddControlsForAudio?: boolean; // default is "false"
+  addControlsForVideos?: boolean; // default is "false"
+  addControlsForAudio?: boolean; // default is "false"
   implicitFigure?: true; // default is "false"
 };
 
@@ -472,7 +472,7 @@ use(rehypeImageToolkit, {
 
 Now, the caption will be the above of the asset.
 
-#### alwaysAddControlsForVideos
+#### addControlsForVideos
 
 It is a **boolean** option which is for adding **`controls`** property to `video` elements by default. 
 
@@ -480,7 +480,7 @@ By default, it is `false`.
 
 ```javascript
 use(rehypeImageToolkit, {
-  alwaysAddControlsForVideos: true,
+  addControlsForVideos: true,
 });
 ```
 
@@ -492,7 +492,7 @@ Now, video elements will have `controls` attribute by default.
 </video>
 ```
 
-#### alwaysAddControlsForAudio
+#### addControlsForAudio
 
 It is a **boolean** option which is for adding **`controls`** property to `audio` elements by default. 
 
@@ -500,7 +500,7 @@ By default, it is `false`.
 
 ```javascript
 use(rehypeImageToolkit, {
-  alwaysAddControlsForAudio: true,
+  addControlsForAudio: true,
 });
 ```
 

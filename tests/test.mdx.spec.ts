@@ -701,8 +701,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `;
 
     const html = await processMdx(input, "mdx", {
-      alwaysAddControlsForVideos: true,
-      alwaysAddControlsForAudio: true,
+      addControlsForVideos: true,
+      addControlsForAudio: true,
     });
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
@@ -749,8 +749,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `;
 
     const html = await processMdx(input, "mdx", {
-      alwaysAddControlsForVideos: true,
-      alwaysAddControlsForAudio: true,
+      addControlsForVideos: true,
+      addControlsForAudio: true,
       figureCaptionPosition: "above",
     });
 

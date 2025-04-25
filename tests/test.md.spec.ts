@@ -734,8 +734,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     const html = String(
       await processMdRawFirst(input, {
-        alwaysAddControlsForVideos: true,
-        alwaysAddControlsForAudio: true,
+        addControlsForVideos: true,
+        addControlsForAudio: true,
       }),
     );
 
@@ -784,8 +784,8 @@ describe("reyhpe-image-hack, with markdown sources", () => {
 
     const html = String(
       await processMdRawFirst(input, {
-        alwaysAddControlsForVideos: true,
-        alwaysAddControlsForAudio: true,
+        addControlsForVideos: true,
+        addControlsForAudio: true,
         figureCaptionPosition: "above",
       }),
     );

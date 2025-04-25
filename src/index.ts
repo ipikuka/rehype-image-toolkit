@@ -61,24 +61,21 @@ declare module "mdast-util-mdx-jsx" {
 export type ImageToolkitOptions = {
   figureCaptionPosition?: "above" | "below";
   implicitFigure?: boolean;
-  alwaysAddControlsForVideos?: boolean;
-  alwaysAddControlsForAudio?: boolean;
+  addControlsForVideos?: boolean;
+  addControlsForAudio?: boolean;
 };
 
 const DEFAULT_SETTINGS: ImageToolkitOptions = {
   figureCaptionPosition: "below",
   implicitFigure: false,
-  alwaysAddControlsForVideos: false,
-  alwaysAddControlsForAudio: false,
+  addControlsForVideos: false,
+  addControlsForAudio: false,
 };
 
 type PartiallyRequiredImageToolkitOptions = Prettify<
   PartiallyRequired<
     ImageToolkitOptions,
-    | "figureCaptionPosition"
-    | "alwaysAddControlsForVideos"
-    | "alwaysAddControlsForAudio"
-    | "implicitFigure"
+    "figureCaptionPosition" | "addControlsForVideos" | "addControlsForAudio" | "implicitFigure"
   >
 >;
 
@@ -827,11 +824,11 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
         const properties = structuredClone(node.properties);
 
-        if (settings.alwaysAddControlsForVideos && newTagName === "video") {
+        if (settings.addControlsForVideos && newTagName === "video") {
           properties["controls"] = true;
         }
 
-        if (settings.alwaysAddControlsForAudio && newTagName === "audio") {
+        if (settings.addControlsForAudio && newTagName === "audio") {
           properties["controls"] = true;
         }
 
@@ -1038,7 +1035,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           node.attributes = removeMdxJsxAttribute(node.attributes, ["alt", "src"]);
           const attributes = structuredClone(node.attributes);
 
-          if (settings.alwaysAddControlsForVideos && newTagName === "video") {
+          if (settings.addControlsForVideos && newTagName === "video") {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
@@ -1046,7 +1043,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
             });
           }
 
-          if (settings.alwaysAddControlsForAudio && newTagName === "audio") {
+          if (settings.addControlsForAudio && newTagName === "audio") {
             attributes.push({
               type: "mdxJsxAttribute",
               name: "controls",
