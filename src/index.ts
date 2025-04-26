@@ -56,15 +56,19 @@ declare module "mdast-util-mdx-jsx" {
 }
 
 export type ImageToolkitOptions = {
-  figureCaptionPosition?: "above" | "below";
+  explicitAutolink?: boolean;
+  explicitFigure?: boolean;
   implicitFigure?: boolean;
+  figureCaptionPosition?: "above" | "below";
   addControlsForVideos?: boolean;
   addControlsForAudio?: boolean;
 };
 
 const DEFAULT_SETTINGS: ImageToolkitOptions = {
-  figureCaptionPosition: "below",
+  explicitAutolink: true,
+  explicitFigure: true,
   implicitFigure: false,
+  figureCaptionPosition: "below",
   addControlsForVideos: false,
   addControlsForAudio: false,
 };
@@ -216,15 +220,19 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
         switch (directive) {
           case "directiveFigureCaption":
-            node.data.directiveCaption = value;
-            if (!isFigureElement(parent)) {
-              node.data.directiveFigure = true;
+            if (settings.explicitFigure) {
+              node.data.directiveCaption = value;
+              if (!isFigureElement(parent)) {
+                node.data.directiveFigure = true;
+              }
             }
             break;
 
           case "directiveOnlyFigure":
-            if (!isFigureElement(parent)) {
-              node.data.directiveFigure = true;
+            if (settings.explicitFigure) {
+              if (!isFigureElement(parent)) {
+                node.data.directiveFigure = true;
+              }
             }
             break;
 
@@ -244,7 +252,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         const { src, isValidAutolink, wrapper } = parseSrcDirective(node.properties.src);
         node.properties.src = src;
 
-        if (node.tagName === "img" && isValidAutolink) {
+        if (settings.explicitAutolink && node.tagName === "img" && isValidAutolink) {
           const isAnchorParent = isAnchorElement(parent);
           const isFigurable = node.data.directiveFigure;
 
@@ -319,15 +327,19 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
           switch (directive) {
             case "directiveFigureCaption":
-              node.data.directiveCaption = value!;
-              if (!isFigureMdxJsxElement(parent)) {
-                node.data.directiveFigure = true;
+              if (settings.explicitFigure) {
+                node.data.directiveCaption = value;
+                if (!isFigureMdxJsxElement(parent)) {
+                  node.data.directiveFigure = true;
+                }
               }
               break;
 
             case "directiveOnlyFigure":
-              if (!isFigureMdxJsxElement(parent)) {
-                node.data.directiveFigure = true;
+              if (settings.explicitFigure) {
+                if (!isFigureMdxJsxElement(parent)) {
+                  node.data.directiveFigure = true;
+                }
               }
               break;
 
@@ -355,7 +367,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
             ? composeMdxJsxAttributeValueExpressionLiteral(parsedSrc)
             : parsedSrc;
 
-          if (node.name === "img" && isValidAutolink) {
+          if (settings.explicitAutolink && node.name === "img" && isValidAutolink) {
             const isAnchorParent = isAnchorMdxJsxElement(parent);
             const isFigurable = node.data?.directiveFigure;
 
@@ -618,7 +630,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       }
     });
 
-    // console.log before application; after preperation
+    // console.log before application; after unrevealing
     // console.dir(tree, { depth: 12 });
 
     /**
