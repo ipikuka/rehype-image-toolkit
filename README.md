@@ -120,7 +120,27 @@ Without `rehype-image-toolkit` the output would be:
 <p>It adds attributes. <img src="video.mp4" alt="" title="title > 640x480 autoplay"></p>
 ```
 
-// TODO add usage with reference in markdown
+**`rehype-image-toolkit` also works with references in markdown.**
+
+```markdown
+![cat image][reference-image] meows ![~][reference-audio]
+
+[reference-image]: [image.png] "cat image"
+[reference-audio]: audio.mp3 "> autoplay"
+```
+
+will produce *(pay attention to brackets around the src of the image; and title directive and tilda `~` inline directive for the audio)*:
+
+```html
+<p>
+  <a href="image.png" target="_blank">
+    <img src="image.png" alt="cat image" />
+  </a> meows
+  <audio autoplay>
+    <source src="audio.mp3" type="audio/mpeg" />
+  </audio>
+</p>
+```
 
 ## Usage with html source
 
@@ -601,7 +621,7 @@ will produce only first one is processed:
 <img src="image.png" alt="^caption"/>
 ```
 
-if you keep `enableMdxJsx` is `true`, the result woudld be:
+if you keep `enableMdxJsx` is `true`, the result would be:
 
 ```html
 <figure>
