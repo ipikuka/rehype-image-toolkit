@@ -54,7 +54,9 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       "
     `);
 
-    expect(html).toMatchInlineSnapshot(`"<p><a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="cat image"></a> meows <audio autoplay><source src="audio.mp3" type="audio/mpeg"></audio></p>"`);
+    expect(html).toMatchInlineSnapshot(
+      `"<p><a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="cat image"></a> meows <audio autoplay><source src="audio.mp3" type="audio/mpeg"></audio></p>"`,
+    );
   });
 
   // ******************************************

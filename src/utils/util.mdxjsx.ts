@@ -90,6 +90,8 @@ export function updateOrAddMdxJsxAttribute(
     if (typeof value === "string") currentClasses.add(value);
     const newClassname = join(Array.from(currentClasses));
 
+    // TODO: handle also template literals for classnames
+
     existingAttribute.value = hasExpressionValueLiteral(existingAttribute)
       ? composeMdxJsxAttributeValueExpressionLiteral(newClassname)
       : newClassname;
