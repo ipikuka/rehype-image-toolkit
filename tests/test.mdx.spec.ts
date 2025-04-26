@@ -1344,8 +1344,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       It adds attributes. ![](video.mp4 "title > 640x480 autoplay")
     `;
 
-    const html = await processMdxRaw(input, "mdx");
-    // const html = String(await processMd(input));
+    const html = await processMdx(input, "mdx");
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<p>It ensures adding videos/audio using image syntax.</p>
@@ -1380,6 +1379,39 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <img src="image.png" alt="alt"/>
       <p>It adds attributes.</p>
       <video title="title" width="640" height="480" autoplay=""><source src="video.mp4" type="video/mp4"/></video>"
+    `);
+  });
+
+  // ******************************************
+  it("images in other elements", async () => {
+    const input = dedent`
+    + xxx ![~](image.png)
+    + xxx ![&](image.png)
+    + xxx ![^](image.png)
+
+    # Title ![~](image.png)
+    # Title ![&](image.png)
+    # Title ![^](image.png)
+
+    **![&](image.png)**
+    **![~](image.png)**
+    **![^](image.png)**
+`;
+
+    const html = await processMdx(input, "mdx");
+
+    expect(html).toMatchInlineSnapshot(`
+      "<ul>
+      <li>xxx <img src="image.png" alt=""/></li>
+      <li>xxx <img src="image.png" alt=""/></li>
+      <li>xxx <figure><img src="image.png" alt=""/></figure></li>
+      </ul>
+      <h1>Title <img src="image.png" alt=""/></h1>
+      <h1>Title <img src="image.png" alt=""/></h1>
+      <h1>Title <figure><img src="image.png" alt=""/></figure></h1>
+      <p><strong><img src="image.png" alt=""/></strong>
+      <strong><img src="image.png" alt=""/></strong>
+      <strong><figure><img src="image.png" alt=""/></figure></strong></p>"
     `);
   });
 });
