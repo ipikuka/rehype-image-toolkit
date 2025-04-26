@@ -120,25 +120,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
   ) as Required<ImageToolkitOptions>;
 
   function isMediaElement(node: ElementContent): boolean {
-    return isImageElement(node) || isVideoElement(node) || isAudioElement(node);
-  }
-
-  function isImageElement(
-    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
-  ): node is Element {
-    return node.type === "element" && node.tagName === "img";
-  }
-
-  function isVideoElement(
-    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
-  ): node is Element {
-    return node.type === "element" && node.tagName === "video";
-  }
-
-  function isAudioElement(
-    node: Root | ElementContent | MdxJsxTextElementHast | MdxJsxFlowElementHast,
-  ): node is Element {
-    return node.type === "element" && node.tagName === "audio";
+    return node.type === "element" && ["img", "video", "audio"].includes(node.tagName);
   }
 
   function isFigureElement(
@@ -163,20 +145,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
   function isMediaMdxJsxElement(node: ElementContent): boolean {
     return (
-      isImageMdxJsxElement(node) || isVideoMdxJsxElement(node) || isAudioMdxJsxElement(node)
+      isMdxJsxElement(node) &&
+      (node.name === "img" || node.name === "video" || node.name === "audio")
     );
-  }
-
-  function isImageMdxJsxElement(node: ElementContent): boolean {
-    return isMdxJsxElement(node) && node.name === "img";
-  }
-
-  function isVideoMdxJsxElement(node: ElementContent): boolean {
-    return isMdxJsxElement(node) && node.name === "video";
-  }
-
-  function isAudioMdxJsxElement(node: ElementContent): boolean {
-    return isMdxJsxElement(node) && node.name === "audio";
   }
 
   function isFigureMdxJsxElement(
