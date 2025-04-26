@@ -449,13 +449,67 @@ All options are **optional** and have **default values**.
 
 ```typescript
 type ImageToolkitOptions = {
+  explicitAutolink?: boolean; // default is "true"
+  explicitFigure?: boolean, // default is "true"
+  implicitFigure?: true; // default is "false"
   figureCaptionPosition?: "above" | "below"; // default is "below"
   addControlsForVideos?: boolean; // default is "false"
   addControlsForAudio?: boolean; // default is "false"
-  implicitFigure?: true; // default is "false"
 };
 
 use(rehypeImageToolkit, ImageToolkitOptions);
+```
+
+#### explicitAutolink
+
+It is a **boolean** option which is for enabling or disabling **ExplicitAutolink** feature.
+
+By default, it is `true`. See more explanation about **ExplicitAutolink** [here](https://github.com/ipikuka/rehype-image-toolkit#create-an-autolink-for-images-explicit-autolink).
+
+```javascript
+use(rehypeImageToolkit, {
+  explicitAutolink: false,
+});
+```
+
+This will disable autolinking to original, removing the directive **brackets** or **parentheses** in the **src** attribute.
+
+```markdown
+![alt]([image.png])
+```
+
+will produce standard image element without wrapping with an anchor `<image src="image.png" alt="alt">`.
+
+#### explicitFigure
+
+It is a **boolean** option which is for enabling or disabling **ExplicitFigure** feature.
+
+By default, it is `true`. See more explanation about **ExplicitFigure** [here](https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-explicit-figure).
+
+```javascript
+use(rehypeImageToolkit, {
+  explicitFigure: false,
+});
+```
+
+This will disable adding `<figure>` and caption, removing the directive **caret `^`** in the **alt** attribute.
+
+```markdown
+![^caption](image.png)
+```
+
+will produce standard image element without figure and caption `<image src="image.png" alt="caption">`.
+
+#### implicitFigure
+
+It is a **boolean** option which is for enabling or disabling **ImplicitFigure** feature.
+
+By default, it is `false`. See more explanation about **ImplicitFigure** [here](https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-implicit-figure).
+
+```markdown
+## Assume you set `{implicitFigure: true}`
+
+![This will be the caption in figure element](image.png)
 ```
 
 #### figureCaptionPosition
@@ -510,18 +564,6 @@ Now, audio elements will have `controls` attribute by default.
 <audio controls>
   <source src="example.mp3" type="audio/mpeg">
 </audio>
-```
-
-#### implicitFigure
-
-It is a **boolean** option which is for adding an image/video/audio into `<figure>` and adding a caption without any directive in the content **if it is alone in the paragraph**.
-
-By default, it is `false`. See more explanation [here](https://github.com/ipikuka/rehype-image-toolkit#add-caption-for-imagesvideosaudio-implicit-figure).
-
-```markdown
-## Assume you set `{implicitFigure: true}`
-
-![This will be the caption in figure element](image.png)
 ```
 
 ### Examples:
