@@ -206,9 +206,9 @@ Now, running `node example.js` you will see.
 
 ## Features
 
-### Convert image syntax to videos and audio
+### Convert image syntax to videos/audio
 
-Markdown lacks built-in support for video and audio, only providing image syntax. **`rehype-image-toolkit`** repurposes the image syntax to render video and audio elements based on file extensions.
+Markdown lacks built-in support for video and audio, only providing image syntax. **`rehype-image-toolkit`** repurposes the image syntax to render video/audio elements based on file extensions.
 
 + `![](example.mp4)` is transformed into `<video>` element
 
@@ -451,10 +451,11 @@ All options are **optional** and have **default values**.
 type ImageToolkitOptions = {
   explicitAutolink?: boolean; // default is "true"
   explicitFigure?: boolean, // default is "true"
-  implicitFigure?: true; // default is "false"
+  implicitFigure?: boolean; // default is "false"
   figureCaptionPosition?: "above" | "below"; // default is "below"
   addControlsForVideos?: boolean; // default is "false"
   addControlsForAudio?: boolean; // default is "false"
+  enableMdxJsx?: boolean; // default is "true"
 };
 
 use(rehypeImageToolkit, ImageToolkitOptions);
@@ -538,7 +539,7 @@ use(rehypeImageToolkit, {
 });
 ```
 
-Now, video elements will have `controls` attribute by default.
+Now, video elements, like `![](example.mp4)`, will have `controls` attribute by default.
 
 ```html
 <video controls>
@@ -558,12 +559,59 @@ use(rehypeImageToolkit, {
 });
 ```
 
-Now, audio elements will have `controls` attribute by default.
+Now, audio elements, like `![](example.mp43)`, will have `controls` attribute by default.
 
 ```html
 <audio controls>
   <source src="example.mp3" type="audio/mpeg">
 </audio>
+```
+
+#### enableMdxJsx
+
+It is a **boolean** option which is for enabling or disabling **MdxJsx Elements** within MDX. 
+
+As you know, the html-like (jsx) syntax in MDX contents are not `HTML` elements, actually `MdxJsx` elements. If you don't want the plugin process html-like (jsx) syntax in the MDX document, set the `enableMdxJsx` to **`{enableMdxJsx: false}`**.
+
+> **Another consideration:** if your content is pure Markdown (markdown + HTML syntax) and not MDX, set `enableMdxJsx` to **`{enableMdxJsx: false}`**. This prevents the plugin from searching for `MdxJsx` elements, resulting in faster rendering.
+
+By default, it is `true`.
+
+```javascript
+use(rehypeImageToolkit, {
+  enableMdxJsx: false,
+});
+```
+
+This will cause the plugin doesn't touch `MdxJsx` elements within MDX contents.
+
+```markdown
+![^caption](image.png)
+
+<img src="image.png" alt="^caption"/>
+```
+
+will produce only first one is processed:
+
+```html
+<figure>
+  <img src="image.png" alt="caption"/>
+  <figcaption>caption</figcaption>
+</figure>
+<img src="image.png" alt="^caption"/>
+```
+
+if you keep `enableMdxJsx` is `true`, the result woudld be:
+
+```html
+<figure>
+  <img src="image.png" alt="caption"/>
+  <figcaption>caption</figcaption>
+</figure>
+<figure>
+  <img src="image.png" alt="caption"/>
+  <figcaption>caption</figcaption>
+</figure>
 ```
 
 ### Examples:
