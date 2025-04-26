@@ -33,6 +33,30 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
+  it("handle references for images in markdown", async () => {
+    const input = dedent`
+      ![cat image][reference-image] meows ![~][reference-audio]
+
+      [reference-image]: [image.png] "cat image"
+      [reference-audio]: audio.mp3 "> autoplay"
+    `;
+
+    const html = await processMdx(input, "mdx");
+
+    expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
+      "<p>
+        <a href="image.png" target="_blank"
+          ><img src="image.png" alt="cat image" title="cat image"
+        /></a>
+        meows <audio autoplay=""><source src="audio.mp3" type="audio/mpeg" /></audio>
+      </p>
+      "
+    `);
+
+    expect(html).toMatchInlineSnapshot(`"<p><a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="cat image"/></a> meows <audio autoplay=""><source src="audio.mp3" type="audio/mpeg"/></audio></p>"`);
+  });
+
+  // ******************************************
   it("handle basic paragraph that consists of images to be transformed to videos/audio", async () => {
     const input = dedent`
       See the figure below. ![^Caption](image.png) Here is the small icons ![](image1.png) ![](image2.png) 

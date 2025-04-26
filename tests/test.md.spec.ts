@@ -33,35 +33,28 @@ describe("reyhpe-image-hack, with markdown sources", () => {
     `);
   });
 
-  // TODO: Add this also README.md
   // ******************************************
-  it("handle references to images", async () => {
+  it("handle references for images in markdown", async () => {
     const input = dedent`
-      Here is the cat image ![cat image][reference-image] and its sound inline ![~][reference-audio].
+      ![cat image][reference-image] meows ![~][reference-audio]
 
-      [reference-image]: [image.png] "title"
-      [reference-audio]: audio.mp3 "title > autoplay"
+      [reference-image]: [image.png] "cat image"
+      [reference-audio]: audio.mp3 "> autoplay"
     `;
 
     const html = String(await processMd(input));
 
     expect(await prettier.format(html, { parser: "html" })).toMatchInlineSnapshot(`
       "<p>
-        Here is the cat image
         <a href="image.png" target="_blank"
-          ><img src="image.png" alt="cat image" title="title"
+          ><img src="image.png" alt="cat image" title="cat image"
         /></a>
-        and its sound inline
-        <audio title="title" autoplay>
-          <source src="audio.mp3" type="audio/mpeg" /></audio
-        >.
+        meows <audio autoplay><source src="audio.mp3" type="audio/mpeg" /></audio>
       </p>
       "
     `);
 
-    expect(html).toMatchInlineSnapshot(`
-      "<p>Here is the cat image <a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="title"></a> and its sound inline <audio title="title" autoplay><source src="audio.mp3" type="audio/mpeg"></audio>.</p>"
-    `);
+    expect(html).toMatchInlineSnapshot(`"<p><a href="image.png" target="_blank"><img src="image.png" alt="cat image" title="cat image"></a> meows <audio autoplay><source src="audio.mp3" type="audio/mpeg"></audio></p>"`);
   });
 
   // ******************************************

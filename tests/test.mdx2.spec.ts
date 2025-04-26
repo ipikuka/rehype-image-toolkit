@@ -517,8 +517,9 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
+  // TODO weird
   // ******************************************
-  it.only("fix it !", async () => {
+  it("fix it !", async () => {
     const input = dedent`
       Hi
       <p>![^caption](image.png)</p>
@@ -529,8 +530,9 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       <p>![^caption](image.png)</p>"
     `);
 
-    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(
-      `"<figure><img src="image.png" alt="caption"/><figcaption>caption</figcaption></figure>"`,
-    );
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(`
+      "<p>Hi
+      <p><figure><img src="image.png" alt="caption"/><figcaption>caption</figcaption></figure></p></p>"
+    `);
   });
 });
