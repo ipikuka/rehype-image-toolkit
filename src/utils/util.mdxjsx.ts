@@ -17,12 +17,11 @@ export function getMdxJsxAttribute(
   );
 }
 
-type AttributeValueResult =
-  | ["string", string]
-  | ["expression", string | number | bigint | boolean | RegExp | null | undefined]
-  | ["unknown", undefined];
+export function getMdxJsxAttributeValueString(
+  attr: MdxJsxAttribute | undefined,
+): string | undefined {
+  if (!attr) return;
 
-export function getMdxJsxAttributeValue(attr: MdxJsxAttribute): AttributeValueResult {
   if (attr.value && typeof attr.value !== "string") {
     const expression = attr.value.data?.estree?.body?.[0];
 
@@ -30,13 +29,29 @@ export function getMdxJsxAttributeValue(attr: MdxJsxAttribute): AttributeValueRe
       expression?.type === "ExpressionStatement" &&
       expression.expression.type === "Literal"
     ) {
-      return ["expression", expression.expression.value];
+      const value = expression.expression.value;
+      if (typeof value === "string") return value;
     }
   } else if (typeof attr.value === "string") {
-    return ["string", attr.value];
+    return attr.value;
   }
 
-  return ["unknown", undefined];
+  return undefined;
+}
+
+export function hasExpressionValueLiteral(attr: MdxJsxAttribute): boolean {
+  if (attr.value && typeof attr.value === "object") {
+    const expression = attr.value.data?.estree?.body?.[0];
+
+    if (
+      expression?.type === "ExpressionStatement" &&
+      expression.expression.type === "Literal"
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function updateOrAddMdxJsxAttribute(
@@ -68,18 +83,16 @@ export function updateOrAddMdxJsxAttribute(
     return;
   }
 
-  const [existingType, existingValue] = getMdxJsxAttributeValue(existingAttribute);
+  const existingValue = getMdxJsxAttributeValueString(existingAttribute);
 
   if (name === "className" && typeof existingValue === "string") {
     const currentClasses = new Set(existingValue.split(/\s+/).filter(Boolean));
     if (typeof value === "string") currentClasses.add(value);
     const newClassname = join(Array.from(currentClasses));
 
-    if (existingType === "string") {
-      existingAttribute.value = newClassname;
-    } else {
-      existingAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(newClassname);
-    }
+    existingAttribute.value = hasExpressionValueLiteral(existingAttribute)
+      ? composeMdxJsxAttributeValueExpressionLiteral(newClassname)
+      : newClassname;
   } else if (name === "style") {
     if (typeof existingAttribute.value === "object" && typeof value === "object") {
       const expressionStatementExistingAttribute =

@@ -18,9 +18,10 @@ import {
   getMdxJsxAttribute,
   removeMdxJsxAttribute,
   updateOrAddMdxJsxAttribute,
-  getMdxJsxAttributeValue,
+  getMdxJsxAttributeValueString,
   composeMdxJsxAttributeValueExpressionLiteral,
   composeMdxJsxAttributeValueExpressionStyle,
+  hasExpressionValueLiteral,
 } from "./utils/util.mdxjsx.js";
 
 type ElementX = Element | MdxJsxFlowElementHast | MdxJsxTextElementHast;
@@ -291,10 +292,15 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
 
       // Preparation part for adding attributes utilizing title ************************
 
-      if (node.properties.title && node.properties.title.includes(">")) {
+      if (node.properties.title?.includes(">")) {
         const [title, directive] = node.properties.title.split(">").map((t) => t.trim());
         node.properties.title = title || undefined;
         node.data.directiveTitle = directive || undefined;
+      }
+
+      // clean node.data if it is empty
+      if (!Object.entries(node.data).length) {
+        node.data = undefined;
       }
     });
 
@@ -320,80 +326,70 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           return;
         }
 
-        // just for type narrowing [node.data has always {_mdxExplicitJsx: true}]
         node.data ??= {};
 
         // Preparation part for adding figure and caption; also unwrapping **************
 
         const altAttribute = getMdxJsxAttribute(node.attributes, "alt");
+        const alt = getMdxJsxAttributeValueString(altAttribute);
 
-        if (altAttribute) {
-          const [altType, alt] = getMdxJsxAttributeValue(altAttribute);
+        if (alt && altAttribute) {
+          const { directive, value } = parseAltDirective(alt);
 
-          if (typeof alt === "string") {
-            const { directive, value } = parseAltDirective(alt);
+          if (directive) {
+            if (node.name === "img") {
+              altAttribute.value = hasExpressionValueLiteral(altAttribute)
+                ? composeMdxJsxAttributeValueExpressionLiteral(value!)
+                : value!;
+            } else if (node.name === "video" || node.name === "audio") {
+              node.attributes = removeMdxJsxAttribute(node.attributes, "alt");
+            }
+          }
 
-            if (directive) {
-              if (node.name === "img") {
-                altAttribute.value =
-                  altType === "string"
-                    ? value!
-                    : composeMdxJsxAttributeValueExpressionLiteral(value!);
-              } else if (node.name === "video" || node.name === "audio") {
-                node.attributes = removeMdxJsxAttribute(node.attributes, "alt");
+          switch (directive) {
+            case "directiveFigureCaption":
+              node.data.directiveCaption = value!;
+              if (!isFigureMdxJsxElement(parent)) {
+                node.data.directiveFigure = true;
               }
-            }
+              break;
 
-            switch (directive) {
-              case "directiveFigureCaption":
-                node.data.directiveCaption = value!;
-                if (!isFigureMdxJsxElement(parent)) {
-                  node.data.directiveFigure = true;
-                }
-                break;
+            case "directiveOnlyFigure":
+              if (!isFigureMdxJsxElement(parent)) {
+                node.data.directiveFigure = true;
+              }
+              break;
 
-              case "directiveOnlyFigure":
-                if (!isFigureMdxJsxElement(parent)) {
-                  node.data.directiveFigure = true;
-                }
-                break;
+            case "directiveUnwrap":
+              node.data.directiveUnwrap = true;
+              break;
 
-              case "directiveUnwrap":
-                node.data.directiveUnwrap = true;
-                break;
-
-              case "directiveInline":
-                node.data.directiveInline = true;
-                break;
-            }
+            case "directiveInline":
+              node.data.directiveInline = true;
+              break;
           }
         }
 
         // Preparation part for adding autolink ***************************************
 
         const srcAttribute = getMdxJsxAttribute(node.attributes, "src");
-        let monitoredSrc: string | undefined;
+        const src = getMdxJsxAttributeValueString(srcAttribute);
+        let monitoredSrc = src;
 
-        if (srcAttribute) {
-          const [srcType, srcValue] = getMdxJsxAttributeValue(srcAttribute);
+        if (src && srcAttribute) {
+          const { src: parsedSrc, isValidAutolink, wrapper } = parseSrcDirective(src);
+          monitoredSrc = parsedSrc;
 
-          if (typeof srcValue === "string") {
-            const { src, isValidAutolink, wrapper } = parseSrcDirective(srcValue);
-            monitoredSrc = src;
+          srcAttribute.value = hasExpressionValueLiteral(srcAttribute)
+            ? composeMdxJsxAttributeValueExpressionLiteral(parsedSrc)
+            : parsedSrc;
 
-            if (srcType === "string") {
-              srcAttribute.value = src;
-            } else {
-              srcAttribute.value = composeMdxJsxAttributeValueExpressionLiteral(src);
-            }
+          if (node.name === "img" && isValidAutolink) {
+            const isAnchorParent = isAnchorMdxJsxElement(parent);
+            const isFigurable = node.data?.directiveFigure;
 
-            if (node.name === "img" && isValidAutolink) {
-              const isAnchorParent = isAnchorMdxJsxElement(parent);
-              const isFigurable = node.data?.directiveFigure;
-
-              if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
-                node.data.directiveAutolink = wrapper! as "bracket" | "parenthesis";
-              }
+            if (!isAnchorParent || (isFigurable && wrapper === "parenthesis")) {
+              node.data.directiveAutolink = wrapper! as "bracket" | "parenthesis";
             }
           }
         }
@@ -407,25 +403,26 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         // Preparation part for adding attributes utilizing title ************************
 
         const titleAttribute = getMdxJsxAttribute(node.attributes, "title");
+        const titleValue = getMdxJsxAttributeValueString(titleAttribute);
 
-        if (titleAttribute) {
-          const [titleType, titleValue] = getMdxJsxAttributeValue(titleAttribute);
+        if (titleAttribute && titleValue?.includes(">")) {
+          const [title, directive] = titleValue.split(">").map((t) => t.trim());
 
-          if (typeof titleValue === "string" && titleValue.includes(">")) {
-            const [title, directive] = titleValue.split(">").map((t) => t.trim());
-
-            if (title) {
-              titleAttribute.value =
-                titleType === "string"
-                  ? title
-                  : composeMdxJsxAttributeValueExpressionLiteral(title);
-            } else {
-              node.attributes = removeMdxJsxAttribute(node.attributes, "title");
-            }
-
-            node.data.directiveTitle = directive || undefined;
+          if (title) {
+            titleAttribute.value = hasExpressionValueLiteral(titleAttribute)
+              ? composeMdxJsxAttributeValueExpressionLiteral(title)
+              : title;
+          } else {
+            node.attributes = removeMdxJsxAttribute(node.attributes, "title");
           }
+
+          node.data.directiveTitle = directive || undefined;
         }
+
+        // do NOT clean node.data since [node.data has always {_mdxExplicitJsx: true}]
+        // if (!Object.entries(node.data).length) {
+        //   node.data = undefined;
+        // }
       },
     );
 
@@ -477,8 +474,8 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           } else if ("attributes" in implicitFigureElement) {
             const altAttribute = getMdxJsxAttribute(implicitFigureElement.attributes, "alt");
             if (altAttribute) {
-              const altOriginal = getMdxJsxAttributeValue(altAttribute)[1];
-              if (typeof altOriginal === "string") {
+              const altOriginal = getMdxJsxAttributeValueString(altAttribute);
+              if (altOriginal !== undefined) {
                 alt = altOriginal;
               }
             }
