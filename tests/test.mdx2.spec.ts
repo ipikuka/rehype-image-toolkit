@@ -480,6 +480,24 @@ describe("reyhpe-image-hack, with MDX sources", () => {
     `);
   });
 
+  // ******************************************
+  it("disable MdxJsx, doesn't touch MdxJsxElements, but first one which is normal markdown syntax", async () => {
+    const input = dedent`
+      ![^caption](image.png)
+      <p>![^caption](image.png)</p>
+      <p><img src="image.png" alt="^caption"/></p>
+      <img src="image.png" alt="^caption"/>
+    `;
+
+    expect(await processMdx(input, "mdx", { enableMdxJsx: false })).toMatchInlineSnapshot(`
+      "<figure><img src="image.png" alt="caption"/><figcaption>caption</figcaption></figure>
+      <p>
+      <p><figure><img src="image.png" alt="caption"/><figcaption>caption</figcaption></figure></p></p>
+      <p><img src="image.png" alt="^caption"/></p>
+      <img src="image.png" alt="^caption"/>"
+    `);
+  });
+
   // TODO handle if the grandparent is already a figure element
   // ******************************************
   it("fix it !", async () => {
@@ -497,5 +515,22 @@ describe("reyhpe-image-hack, with MDX sources", () => {
       "<figure><a href="https://example.com"><figure><img src="image.png" alt="Caption"/><figcaption>Caption</figcaption></figure></a></figure>
       <figure><a href="https://example.com"><figure><a href="image.png" target="_blank"><img src="image.png" alt="Caption"/></a><figcaption>Caption</figcaption></figure></a></figure>"
     `);
+  });
+
+  // ******************************************
+  it.only("fix it !", async () => {
+    const input = dedent`
+      Hi
+      <p>![^caption](image.png)</p>
+    `;
+
+    expect(await processMdxRaw(input, "md")).toMatchInlineSnapshot(`
+      "<p>Hi</p>
+      <p>![^caption](image.png)</p>"
+    `);
+
+    expect(await processMdx(input, "mdx")).toMatchInlineSnapshot(
+      `"<figure><img src="image.png" alt="caption"/><figcaption>caption</figcaption></figure>"`,
+    );
   });
 });
