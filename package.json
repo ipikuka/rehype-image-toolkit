@@ -1,6 +1,6 @@
 {
   "name": "rehype-image-toolkit",
-  "version": "0.17.0-beta",
+  "version": "1.0.0",
   "description": "Rehype plugin to enhance markdown image syntax `![]()` and MDX media elements (`img`, `audio`, `video`) by styling and adding attributes, wrapping with figure and adding captions, auto-linking to originals, converting images to video/audio based on the file extension",
   "type": "module",
   "exports": "./dist/esm/index.js",
