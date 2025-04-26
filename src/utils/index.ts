@@ -1,12 +1,3 @@
-export function getExtension(src: string | undefined): string | undefined {
-  // consider also it may has a trailing query or hash
-  const RE = /\.([a-zA-Z0-9]+)(?=[?#]|$)/i;
-
-  const match = src?.match(RE);
-
-  return match?.[1];
-}
-
 export function ensureSemiColon(str: string) {
   return str.endsWith(";") ? str : str + ";";
 }
@@ -47,13 +38,13 @@ export function parseAltDirective(alt: string): {
   };
 }
 
-interface ParseSrcResult {
+type ParseSrcResult = {
   src: string;
   isValidAutolink: boolean;
   wrapper: string | null;
-}
+};
 
-export function parseSrcWrapper(originalSrc: string): ParseSrcResult {
+export function parseSrcDirective(originalSrc: string): ParseSrcResult {
   const decodedSrc = decodeURI(originalSrc);
 
   const httpsRegex = /^https?:\/\/[^/]+/i; // HTTP or HTTPS links
@@ -85,5 +76,51 @@ export function parseSrcWrapper(originalSrc: string): ParseSrcResult {
   }
 
   // No matching wrapper found; return original src with invalid status
-  return { src: decodedSrc, isValidAutolink: false, wrapper: null };
+  return { src: originalSrc, isValidAutolink: false, wrapper: null };
+}
+
+const videoMimeTypes: Record<string, string> = {
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  ogv: "video/ogg",
+  mkv: "video/x-matroska",
+  avi: "video/x-msvideo",
+};
+
+const audioMimeTypes: Record<string, string> = {
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  aac: "audio/aac",
+  flac: "audio/flac",
+  m4a: "audio/mp4",
+};
+
+export const mimeTypesMap = { ...videoMimeTypes, ...audioMimeTypes };
+
+const isVideoExt = (ext: string) => Object.keys(videoMimeTypes).indexOf(ext) >= 0;
+const isAudioExt = (ext: string) => Object.keys(audioMimeTypes).indexOf(ext) >= 0;
+
+function getExtension(src: string | undefined): string | undefined {
+  // consider also it may has a trailing query or hash
+  const RE = /\.([a-zA-Z0-9]+)(?=[?#]|$)/i;
+
+  const match = src?.match(RE);
+
+  return match?.[1];
+}
+
+export function parseSrcExtension(src: string | undefined): string | undefined {
+  const extension = getExtension(src);
+
+  if (!extension) return;
+
+  const needsConversion = isVideoExt(extension) || isAudioExt(extension);
+
+  if (needsConversion) {
+    return `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
+  }
+
+  return undefined;
 }

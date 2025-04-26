@@ -9,17 +9,18 @@ import { parse as split } from "space-separated-tokens";
 
 import {
   appendStyle,
-  getExtension,
+  mimeTypesMap,
   parseAltDirective,
-  parseSrcWrapper,
+  parseSrcDirective,
+  parseSrcExtension,
 } from "./utils/index.js";
 import {
-  getMdxJsxAttributeValue,
-  updateOrAddMdxJsxAttribute,
-  composeMdxJsxAttributeValueExpressionLiteral,
-  composeMdxJsxAttributeValueExpressionStyle,
   getMdxJsxAttribute,
   removeMdxJsxAttribute,
+  updateOrAddMdxJsxAttribute,
+  getMdxJsxAttributeValue,
+  composeMdxJsxAttributeValueExpressionLiteral,
+  composeMdxJsxAttributeValueExpressionStyle,
 } from "./utils/util.mdxjsx.js";
 
 type ElementX = Element | MdxJsxFlowElementHast | MdxJsxTextElementHast;
@@ -100,32 +101,6 @@ const htmlToReactAttrMap: Record<string, string> = {
   // <a>
   hreflang: "hrefLang",
 };
-
-const videoMimeTypes: Record<string, string> = {
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-  webm: "video/webm",
-  ogv: "video/ogg",
-  mkv: "video/x-matroska",
-  avi: "video/x-msvideo",
-};
-
-const audioMimeTypes: Record<string, string> = {
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  ogg: "audio/ogg",
-  aac: "audio/aac",
-  flac: "audio/flac",
-  m4a: "audio/mp4",
-};
-
-const mimeTypesMap = { ...videoMimeTypes, ...audioMimeTypes };
-
-const videoExtensions = Object.keys(videoMimeTypes);
-const audioExtensions = Object.keys(audioMimeTypes);
-
-const isVideoExt = (ext: string) => videoExtensions.indexOf(ext) >= 0;
-const isAudioExt = (ext: string) => audioExtensions.indexOf(ext) >= 0;
 
 /**
  *
@@ -294,7 +269,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       // Preparation part for adding autolink ***************************************
 
       if (node.properties.src) {
-        const { src, isValidAutolink, wrapper } = parseSrcWrapper(node.properties.src);
+        const { src, isValidAutolink, wrapper } = parseSrcDirective(node.properties.src);
         node.properties.src = src;
 
         if (node.tagName === "img" && isValidAutolink) {
@@ -310,12 +285,8 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       // Preparation part for conversion to video/audio ****************************
 
       if (node.tagName === "img") {
-        const extension = getExtension(node.properties.src);
-        const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
-
-        if (needsConversion) {
-          node.data.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
-        }
+        const directiveConversion = parseSrcExtension(node.properties.src);
+        if (directiveConversion) node.data.directiveConversion = directiveConversion;
       }
 
       // Preparation part for adding attributes utilizing title ************************
@@ -407,7 +378,7 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
           const [srcType, srcValue] = getMdxJsxAttributeValue(srcAttribute);
 
           if (typeof srcValue === "string") {
-            const { src, isValidAutolink, wrapper } = parseSrcWrapper(srcValue);
+            const { src, isValidAutolink, wrapper } = parseSrcDirective(srcValue);
             monitoredSrc = src;
 
             if (srcType === "string") {
@@ -428,14 +399,9 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
         }
 
         // Preparation part for conversion to video/audio ****************************
-
-        if (monitoredSrc) {
-          const extension = getExtension(monitoredSrc);
-          const needsConversion = extension && (isVideoExt(extension) || isAudioExt(extension));
-
-          if (needsConversion && node.name === "img") {
-            node.data.directiveConversion = `${isVideoExt(extension) ? "video" : "audio"}/${extension}`;
-          }
+        if (node.name === "img") {
+          const directiveConversion = parseSrcExtension(monitoredSrc);
+          if (directiveConversion) node.data.directiveConversion = directiveConversion;
         }
 
         // Preparation part for adding attributes utilizing title ************************
