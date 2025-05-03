@@ -699,7 +699,7 @@ I like to contribute the Unified / Remark / MDX ecosystem, so I recommend you to
 - [`recma-mdx-html-override`](https://www.npmjs.com/package/recma-mdx-html-override)
   – Recma plugin to allow selected raw HTML elements to be overridden via MDX components.
 - [`recma-mdx-interpolate`](https://www.npmjs.com/package/recma-mdx-interpolate)
-  – Recma plugin to interpolate identifiers wrapped in curly braces in the alt/src/title of a link/image in MDX.
+  – Recma plugin to enable interpolation of identifiers wrapped in curly braces within the `alt`, `src`, `href`, and `title` attributes of markdown link and image syntax in MDX.
 
 ## License
 

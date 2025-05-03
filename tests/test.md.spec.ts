@@ -4,6 +4,7 @@ import * as prettier from "prettier";
 
 import { processMd, processMdRawFirst } from "./util/index";
 
+// TODO sync with the test for mdx
 describe("reyhpe-image-hack, with markdown sources", () => {
   // ******************************************
   it("handle basic images and transformation to videos/audio", async () => {
