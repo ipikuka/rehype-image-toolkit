@@ -531,11 +531,20 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
       }
 
       function createEmptyParagraph(): Element | MdxJsxFlowElementHast {
-        if (isMdxJsxElement(node as ElementContent)) {
+        if ("attributes" in node) {
           return {
             type: "mdxJsxFlowElement",
             name: "p",
-            attributes: [],
+            attributes: node.attributes,
+            children: [],
+          };
+        }
+
+        if ("properties" in node) {
+          return {
+            type: "element",
+            tagName: "p",
+            properties: node.properties,
             children: [],
           };
         }
