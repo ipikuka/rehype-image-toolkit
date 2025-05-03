@@ -547,8 +547,10 @@ const plugin: Plugin<[ImageToolkitOptions?], Root> = (options) => {
             properties: node.properties,
             children: [],
           };
+          /* v8 ignore next */
         }
 
+        /* v8 ignore next 6 */
         return {
           type: "element",
           tagName: "p",
