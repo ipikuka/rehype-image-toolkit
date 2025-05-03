@@ -2,6 +2,7 @@ import type { VFileCompatible } from "vfile";
 import { evaluate } from "next-mdx-remote-client/rsc";
 import ReactDOMServer from "react-dom/server";
 import rehypeRaw from "rehype-raw";
+import remarkFlexibleParagraphs from "remark-flexible-paragraphs";
 
 // for typing in MDXComponents
 import React from "react";
@@ -18,6 +19,7 @@ export const processMdx = async (
     options: {
       mdxOptions: {
         format,
+        remarkPlugins: [remarkFlexibleParagraphs],
         rehypePlugins: [[plugin, options]],
       },
     },
@@ -41,6 +43,7 @@ export const processMdxRaw = async (
     options: {
       mdxOptions: {
         format,
+        remarkPlugins: [remarkFlexibleParagraphs],
         rehypePlugins: [rehypeRaw, [plugin, options]],
       },
     },

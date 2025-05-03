@@ -2,6 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import rehypeParse from "rehype-parse";
 import gfm from "remark-gfm";
+import remarkFlexibleParagraphs from "remark-flexible-paragraphs";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
@@ -64,4 +65,20 @@ export const processMdRawLast = async (
   options?: ImageToolkitOptions,
 ): Promise<VFile> => {
   return compilerCreatorRawLast(options).process(content);
+};
+
+const compilerCreatorThird = (options?: ImageToolkitOptions) =>
+  unified()
+    .use(remarkParse)
+    .use(gfm)
+    .use(remarkFlexibleParagraphs)
+    .use(remarkRehype)
+    .use(plugin, options)
+    .use(rehypeStringify);
+
+export const processMdThird = async (
+  content: VFileCompatible,
+  options?: ImageToolkitOptions,
+): Promise<VFile> => {
+  return compilerCreatorThird(options).process(content);
 };
