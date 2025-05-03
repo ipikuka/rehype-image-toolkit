@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import dedent from "dedent";
 import * as prettier from "prettier";
 
-import { processMd, processMdRawFirst } from "./util/index";
+import { processMd, processMdRawFirst, processMdThird } from "./util/index";
 
 // TODO sync with the test for mdx
 describe("reyhpe-image-hack, with markdown sources", () => {
@@ -1410,6 +1410,30 @@ describe("reyhpe-image-hack, with markdown sources", () => {
       <p><strong><img src="image.png" alt=""></strong>
       <strong><img src="image.png" alt=""></strong>
       <strong><figure><img src="image.png" alt=""></figure></strong></p>"
+    `);
+  });
+
+  // ******************************************
+  it("works with other plugins (preserves the properties of paragraphs)", async () => {
+    const input = dedent`
+      ![alt](image.png ">180x40")
+
+      ~|> ![alt](image.png ">180x40")
+
+      ![alt](video.mp4)
+
+      ~|> center ![alt](video.mp4 ">.center") center
+    `;
+
+    const html = String(await processMdThird(input));
+
+    expect(html).toMatchInlineSnapshot(`
+      "<p><img src="image.png" alt="alt" width="180" height="40"></p>
+      <p class="flexible-paragraph flexiparaph-align-center" style="text-align:center"><img src="image.png" alt="alt" width="180" height="40"></p>
+      <video><source src="video.mp4" type="video/mp4"></video>
+      <p class="flexible-paragraph flexiparaph-align-center" style="text-align:center">center</p>
+      <video class="center"><source src="video.mp4" type="video/mp4"></video>
+      <p class="flexible-paragraph flexiparaph-align-center" style="text-align:center">center</p>"
     `);
   });
 
