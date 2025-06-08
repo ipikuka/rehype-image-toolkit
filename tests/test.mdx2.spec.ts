@@ -519,7 +519,7 @@ describe("reyhpe-image-hack, with MDX sources", () => {
 
   // TODO weird
   // ******************************************
-  it("fix it !", async () => {
+  it("fix it 2 !", async () => {
     const input = dedent`
       Hi
       <p>![^caption](image.png)</p>

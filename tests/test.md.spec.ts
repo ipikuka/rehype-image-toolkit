@@ -141,7 +141,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("check the behavior of conversion and default extraction without any other directives ", async () => {
+  it("check the behavior of conversion and default extraction without any other directives", async () => {
     const input = dedent`
       <p><img src="video.mp4"/></p>
       <p><img src="audio.mp3"/></p>
@@ -1022,7 +1022,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle transformation to videos/audio already wrapped with a link ", async () => {
+  it("handle transformation to videos/audio already wrapped with a link", async () => {
     const input = dedent`
       [![](image.png)](https://example.com)
 
@@ -1054,7 +1054,7 @@ describe("reyhpe-image-hack, with markdown sources", () => {
   });
 
   // ******************************************
-  it("handle transformation to videos/audio; and handle adding figure already wrapped with a link ", async () => {
+  it("handle transformation to videos/audio; and handle adding figure already wrapped with a link", async () => {
     const input = dedent`
       [![^^](image.png)](https://example.com)
 
