@@ -89,7 +89,7 @@
   },
   "dependencies": {
     "@types/hast": "^3.0.4",
-    "estree-util-value-to-estree": "^3.3.3",
+    "estree-util-value-to-estree": "^3.4.0",
     "hast-util-whitespace": "^3.0.0",
     "mdast-util-mdx-jsx": "^3.2.0",
     "space-separated-tokens": "^2.0.2",
