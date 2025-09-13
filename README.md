@@ -8,15 +8,20 @@
 [![typescript][badge-typescript]][url-typescript]
 [![license][badge-license]][url-license]
 
-This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by auto-linking bracketed or parenthesized image URLs, wrapping them in `<figure>` with optional captions, unwrapping images/videos/audio from paragraph, parsing directives in title for styling and adding attributes, and dynamically converting images into `<video>` or `<audio>` elements based on file extension.**
+This package is a **[unified][unified]** (**[rehype][rehype]**) plugin that **enhances Markdown image syntax `![]()` and Markdown/MDX media elements (`<img>`, `<audio>`, `<video>`) by;** 
++ auto-linking bracketed or parenthesized image URLs,
++ wrapping them in `<figure>` with optional caption `<figcaption>`,
++ unwrapping images/videos/audio from paragraph,
++ parsing directives in title for styling and adding attributes,
++ dynamically converting images into `<video>` or `<audio>` elements based on file extension.
 
 **[unified][unified]** is a project that transforms content with abstract syntax trees (ASTs) using the new parser **[micromark][micromark]**. **[remark][remark]** adds support for markdown to unified. **[mdast][mdast]** is the Markdown Abstract Syntax Tree (AST) which is a specification for representing markdown in a syntax tree. **[rehype][rehype]** is a tool that transforms HTML with plugins. **[hast][hast]** stands for HTML Abstract Syntax Tree (HAST) that rehype uses.
 
-Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-toolkit`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `figure` and adding caption, and unwrapping media from paragraph.
+Markdown natively supports images but lacks built-in syntax for videos and audio. **`rehype-image-toolkit`** extends image syntax, automatically transforming it into `<video>` or `<audio>` elements based on file extensions, supporting additional attributes, providing custom directives for autolink to originals, wrapping media with `<figure>` and adding caption `<figcaption>`, and unwrapping media from paragraph.
 
 ## When should I use this?
 
-**From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. In some cases, I need more control—certain images should be excluded from these transformations.** For example, I might NOT want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph.
+**From what I’ve seen, most Remark and Rehype plugins that handle Markdown images apply their features globally, without offering much flexibility. In some cases, I need more control—certain images should be excluded from these transformations.** For example, I might **NOT** want every image to be wrapped in a `<figure>`, include a caption, be automatically linked to its source, or unwrapping from paragraph.
 
 **That's why each feature in `rehype-image-toolkit` is individually controllable via directives. Its most distinct advantage over other remark/rehype plugins.**
 
@@ -25,7 +30,7 @@ I designed **`rehype-image-toolkit`** as an all-in-one solution, bringing togeth
 **`rehype-image-toolkit`** is ideal for:
 + **adding videos/audio using Markdown image syntax** – No need for HTML or custom MDX components.
 + **styling and adding attributes to images/videos/audio** – Easily add classes, IDs, styles, and other attributes.
-+ **adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption.
++ **adding `<figure>` and caption** – Easily wrap in a `<figure>` element with an optional caption `<figcaption>`.
 + **unwrapping media from paragraph** – Control which images/videos/audio to be or NOT to be extracted from paragraph.
 + **adding autolink to the original image** - Control which images to be automatically linked to their original source.
 
@@ -110,7 +115,7 @@ Now, running `node example.js` you will see.
 </video>
 ```
 
-Without `rehype-image-toolkit` the output would be:
+Without **`rehype-image-toolkit`** the output would be:
 
 ```html
 <p>It ensures adding videos/audio using image syntax. <img src="video.mp4" alt=""></p>
@@ -371,9 +376,9 @@ According to the HTML specification, **anchor elements cannot be nested**. Despi
 
 ### Add caption for images/videos/audio (Explicit Figure)
 
-Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element and add a caption.
+Add a **caret `^`** special directive at the start of the **alt** attribute in order to wrap the media asset with `<figure>` element and add a caption `<figcaption>`.
 
-Since `<figure>` is block-level element by default, **`rehype-image-toolkit`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted !
+Since `<figure>` is block-level element by default, **`rehype-image-toolkit`** unwraps it from paragraphs, splitting the text or other content around their original position. There is no choice not to be extracted!
 
 ```markdown
 ![^Caption of the image](image.png "title")
@@ -417,7 +422,7 @@ If you want just a regular inline image, do not use any **`^`** directive in the
 
 ### Add caption for images/videos/audio (Implicit Figure)
 
-There is an option **`implicitFigure`** for adding an image/video/audio into `<figure>` and adding a caption. If you set **`{implicitFigure: true}`** in the options, an image will be rendered as a figure without any directive in the content **if it is alone in the paragraph** . The image’s alt text will be used as the caption. This feature is aligned with [pandoc markdown implicit figure](https://pandoc.org/MANUAL.html#extension-implicit_figures).
+There is an option **`implicitFigure`** for adding an image/video/audio into `<figure>` and adding a caption `<figcaption>`. If you set **`{implicitFigure: true}`** in the options, an image will be rendered as a figure without any directive in the content **if it is alone in the paragraph** . The image’s alt text will be used as the caption. This feature is aligned with [pandoc markdown implicit figure](https://pandoc.org/MANUAL.html#extension-implicit_figures).
 
 ```markdown
 ## Assume you set `{implicitFigure: true}`
@@ -650,7 +655,7 @@ This plugin works with `rehype-parse` version 1+, `rehype-stringify` version 1+,
 
 ## Security
 
-Use of `rehype-image-toolkit` involves rehype (hast), but doesn't lead to cross-site scripting (XSS) attacks.
+Use of **`rehype-image-toolkit`** involves rehype (hast), but doesn't lead to cross-site scripting (XSS) attacks.
 
 ## My Plugins
 
