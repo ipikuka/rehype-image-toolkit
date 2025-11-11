@@ -89,13 +89,13 @@
   },
   "dependencies": {
     "@types/hast": "^3.0.4",
-    "estree-util-value-to-estree": "^3.4.0",
+    "estree-util-value-to-estree": "^3.5.0",
     "hast-util-whitespace": "^3.0.0",
     "mdast-util-mdx-jsx": "^3.2.0",
     "space-separated-tokens": "^2.0.2",
-    "style-to-js": "^1.1.17",
+    "style-to-js": "^1.1.19",
     "unist-util-visit": "^5.0.0",
-    "unist-util-visit-parents": "^6.0.1"
+    "unist-util-visit-parents": "^6.0.2"
   },
   "peerDependencies": {
     "unified": "^11"
