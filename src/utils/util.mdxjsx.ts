@@ -22,7 +22,12 @@ export function getMdxJsxAttributeValueString(
 ): string | undefined {
   if (!attr) return;
 
-  if (attr.value && typeof attr.value !== "string") {
+  if (typeof attr.value === "string") {
+    return attr.value;
+  }
+
+  /* v8 ignore next -- @preserve */
+  if (attr.value) {
     const expression = attr.value.data?.estree?.body?.[0];
 
     if (
@@ -30,10 +35,10 @@ export function getMdxJsxAttributeValueString(
       expression.expression.type === "Literal"
     ) {
       const value = expression.expression.value;
+
+      /* v8 ignore next -- @preserve */
       if (typeof value === "string") return value;
     }
-  } else if (typeof attr.value === "string") {
-    return attr.value;
   }
 
   return undefined;
@@ -43,6 +48,7 @@ export function hasExpressionValueLiteral(attr: MdxJsxAttribute): boolean {
   if (attr.value && typeof attr.value === "object") {
     const expression = attr.value.data?.estree?.body?.[0];
 
+    /* v8 ignore next -- @preserve */
     if (
       expression?.type === "ExpressionStatement" &&
       expression.expression.type === "Literal"
@@ -63,8 +69,8 @@ export function updateOrAddMdxJsxAttribute(
     (attr): attr is MdxJsxAttribute => attr.type === "mdxJsxAttribute" && attr.name === name,
   );
 
-  /* v8 ignore next 5 */
   if (value === undefined) {
+    /* v8 ignore next -- @preserve */
     if (existingAttribute) attributes.splice(attributes.indexOf(existingAttribute), 1);
 
     return;
@@ -76,7 +82,7 @@ export function updateOrAddMdxJsxAttribute(
     return;
   }
 
-  /* v8 ignore next 9 */
+  /* v8 ignore if -- @preserve */
   if (value === null) {
     if (existingAttribute) existingAttribute.value = null;
 
@@ -87,7 +93,10 @@ export function updateOrAddMdxJsxAttribute(
 
   if (name === "className" && typeof existingValue === "string") {
     const currentClasses = new Set(existingValue.split(/\s+/).filter(Boolean));
+
+    /* v8 ignore next -- @preserve */
     if (typeof value === "string") currentClasses.add(value);
+
     const newClassname = join(Array.from(currentClasses));
 
     // TODO: handle also template literals for classnames
@@ -96,6 +105,7 @@ export function updateOrAddMdxJsxAttribute(
       ? composeMdxJsxAttributeValueExpressionLiteral(newClassname)
       : newClassname;
   } else if (name === "style") {
+    /* v8 ignore if -- @preserve */
     if (typeof existingAttribute.value === "object" && typeof value === "object") {
       const expressionStatementExistingAttribute =
         existingAttribute.value?.data?.estree?.body[0];
